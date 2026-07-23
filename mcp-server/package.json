@@ -1,0 +1,24 @@
+{
+  "name": "@royal-chain/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Royal Chain Wallet MCP server — exposes wallet/admin operations as MCP tools, backed by Supabase (never raw PostgreSQL).",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.110.2",
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0"
+  }
+}

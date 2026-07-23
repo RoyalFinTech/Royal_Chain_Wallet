@@ -1,0 +1,318 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import {
+  Bell,
+  ScanLine,
+  Send,
+  Plus,
+  ArrowDownToLine,
+  Receipt,
+  Repeat,
+  ShieldCheck,
+  TrendingUp,
+  TrendingDown,
+  QrCode,
+  Wallet,
+  LayoutGrid,
+  ArrowLeftRight,
+  Lock,
+} from "lucide-react";
+import { WalletCard } from "@/components/wallet/WalletCard";
+import { TransactionCard } from "@/components/wallet/TransactionCard";
+import { WalletStrip } from "@/components/wallet/WalletStrip";
+import { ThemeToggle } from "@/components/brand/ThemeToggle";
+import { MOCK_TRANSACTIONS, SPEND_DATA, INCOME_DATA, formatMoney } from "@/lib/mock-data";
+import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { DEMO_IDENTITY } from "@/lib/wallet-identity";
+import {
+  CURRENCY_LIST,
+  type CurrencyCode,
+  CURRENCY_BALANCES,
+  formatCurrency,
+} from "@/lib/currencies";
+import {
+  TransactionListSkeleton,
+  CurrencyChipSkeleton,
+  WalletBalanceSkeleton,
+  AccountSummarySkeleton,
+  InsightCardSkeleton,
+} from "@/components/ui/skeletons";
+import { useSimulatedLoading } from "@/hooks/use-simulated-loading";
+import { staggerDelay } from "@/lib/motion";
+
+export const Route = createFileRoute("/app/")({
+  component: Dashboard,
+});
+
+const greet = () => {
+  const h = new Date().getHours();
+  if (h < 12) return "Good Morning";
+  if (h < 18) return "Good Afternoon";
+  return "Good Evening";
+};
+
+const quickActions = [
+  { to: "/send", label: "Send", icon: Send, color: "from-amber-400 to-yellow-600" },
+  {
+    to: "/app/receive",
+    label: "Receive",
+    icon: ArrowDownToLine,
+    color: "from-emerald-400 to-teal-600",
+  },
+  { to: "/app/swap", label: "Swap", icon: ArrowLeftRight, color: "from-cyan-400 to-blue-600" },
+  { to: "/app/staking", label: "Stake", icon: Lock, color: "from-lime-400 to-green-600" },
+  { to: "/deposit", label: "Add Funds", icon: Plus, color: "from-violet-400 to-purple-600" },
+  { to: "/app/payments", label: "Pay", icon: Receipt, color: "from-blue-400 to-indigo-600" },
+  { to: "/app/exchange", label: "Exchange", icon: Repeat, color: "from-rose-400 to-red-600" },
+  { to: "/qr", label: "Scan QR", icon: QrCode, color: "from-orange-400 to-amber-600" },
+  {
+    to: "/app/ecosystem",
+    label: "Ecosystem",
+    icon: LayoutGrid,
+    color: "from-fuchsia-400 to-purple-600",
+  },
+];
+
+function Dashboard() {
+  const [currency, setCurrency] = useState<CurrencyCode>("USD");
+  const loadingFeed = useSimulatedLoading(650);
+  const loadingCurrencies = useSimulatedLoading(500);
+  const loadingBalance = useSimulatedLoading(600);
+  const loadingInsights = useSimulatedLoading(800);
+
+  return (
+    <div className="px-5 pt-10">
+      {/* Top bar */}
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full gradient-gold font-display text-sm font-bold text-navy shadow-glow">
+            FN
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">{greet()},</p>
+            <p className="truncate font-display text-base font-bold">Fatoumata Njie</p>
+            <p className="mt-0.5 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+              <span>{DEMO_IDENTITY.walletId}</span>
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-success/15 px-1.5 py-0.5 text-success">
+                <ShieldCheck className="h-2.5 w-2.5" /> Protected
+              </span>
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/qr"
+            aria-label="Scan"
+            className="grid h-10 w-10 place-items-center rounded-full glass"
+          >
+            <ScanLine className="h-4 w-4" />
+          </Link>
+          <Link
+            to="/app/alerts"
+            aria-label="Notifications"
+            className="relative grid h-10 w-10 place-items-center rounded-full glass"
+          >
+            <Bell className="h-4 w-4" />
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-gold ring-2 ring-background" />
+          </Link>
+          <ThemeToggle />
+        </div>
+      </header>
+
+      {/* Live multi-chain wallet */}
+      <div className="mt-6">
+        <WalletStrip />
+      </div>
+
+      {/* Wallet card (multi-currency display) */}
+      <div className="mt-4">
+        {loadingBalance ? (
+          <WalletBalanceSkeleton />
+        ) : (
+          <WalletCard currency={currency} onCurrencyChange={setCurrency} />
+        )}
+      </div>
+
+      {/* Currency strip */}
+      <div className="no-scrollbar mt-4 -mx-5 flex gap-2 overflow-x-auto px-5">
+        {loadingCurrencies
+          ? Array.from({ length: 5 }).map((_, i) => <CurrencyChipSkeleton key={i} />)
+          : CURRENCY_LIST.map((c, i) => (
+              <button
+                key={c.code}
+                onClick={() => setCurrency(c.code)}
+                className={`press shrink-0 animate-fade-in rounded-2xl border px-3 py-2 text-left transition ${c.code === currency ? "border-gold bg-gold/10" : "border-border bg-card"}`}
+                style={staggerDelay(i, 40)}
+              >
+                <p className="text-[10px] font-medium text-muted-foreground">
+                  {c.flag} {c.code}
+                </p>
+                <p className="font-display text-xs font-bold">
+                  {formatCurrency(CURRENCY_BALANCES[c.code], c.code)}
+                </p>
+              </button>
+            ))}
+        <Link
+          to="/app/currencies"
+          className="grid shrink-0 place-items-center rounded-2xl border border-dashed border-border px-3 text-[10px] font-medium text-muted-foreground"
+        >
+          <span className="flex items-center gap-1">
+            <Wallet className="h-3 w-3" /> Manage
+          </span>
+        </Link>
+      </div>
+
+      {/* Quick Actions */}
+      <section className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold">Quick Actions</h2>
+          <Link to="/app/payments" className="text-xs text-gold hover:underline">
+            See all
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {quickActions.map(({ to, label, icon: Icon, color }) => (
+            <Link
+              key={label}
+              to={to}
+              className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-3 text-center transition hover:-translate-y-0.5 hover:shadow-soft"
+            >
+              <span
+                className={`grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br ${color} text-white shadow-soft`}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className="text-[11px] font-medium leading-tight">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Insights */}
+      <section className="mt-8">
+        <h2 className="mb-3 font-display text-lg font-bold">Financial insights</h2>
+        {loadingInsights ? (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <InsightCardSkeleton />
+              <InsightCardSkeleton />
+            </div>
+            <div className="mt-3">
+              <AccountSummarySkeleton />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <InsightCard title="Spending" total={7350} trend={-8} data={SPEND_DATA} tone="down" />
+              <InsightCard title="Income" total={8450} trend={12} data={INCOME_DATA} tone="up" />
+            </div>
+            <StatsGrid />
+          </>
+        )}
+      </section>
+
+      {/* Recent Transactions */}
+      <section className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold">Recent transactions</h2>
+          <Link to="/app/transactions" className="text-xs text-gold hover:underline">
+            View all
+          </Link>
+        </div>
+        <div className="space-y-2">
+          {loadingFeed ? (
+            <TransactionListSkeleton rows={4} />
+          ) : (
+            MOCK_TRANSACTIONS.slice(0, 4).map((tx, i) => (
+              <div
+                key={tx.id}
+                className="animate-fade-in"
+                style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards" }}
+              >
+                <TransactionCard tx={tx} />
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function InsightCard({
+  title,
+  total,
+  trend,
+  data,
+  tone,
+}: {
+  title: string;
+  total: number;
+  trend: number;
+  data: { name: string; amount: number }[];
+  tone: "up" | "down";
+}) {
+  const positive = tone === "up";
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card p-4">
+      <p className="text-xs text-muted-foreground">{title} · 7d</p>
+      <p className="mt-1 font-display text-xl font-bold">{formatMoney(total)}</p>
+      <div
+        className={`mt-1 inline-flex items-center gap-1 text-xs ${positive ? "text-success" : "text-destructive"}`}
+      >
+        {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+        {trend > 0 ? "+" : ""}
+        {trend}%
+      </div>
+      <div className="mt-3 h-16">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id={`grad-${title}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--gold)" stopOpacity={0.6} />
+                <stop offset="100%" stopColor="var(--gold)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="name" hide />
+            <Tooltip
+              cursor={{ stroke: "var(--gold)", strokeOpacity: 0.3 }}
+              contentStyle={{
+                background: "var(--popover)",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                fontSize: 11,
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="amount"
+              stroke="var(--gold)"
+              strokeWidth={2}
+              fill={`url(#grad-${title})`}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+function StatsGrid() {
+  const stats = [
+    { label: "Transactions", value: "38", sub: "this month" },
+    { label: "Saved", value: "D2,400", sub: "in Vault" },
+    { label: "Cashback", value: "D120", sub: "earned" },
+  ];
+  return (
+    <div className="mt-3 grid grid-cols-3 gap-2">
+      {stats.map((s) => (
+        <div key={s.label} className="rounded-2xl border border-border bg-card p-3 text-center">
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{s.label}</p>
+          <p className="mt-1 font-display text-sm font-bold">{s.value}</p>
+          <p className="text-[10px] text-muted-foreground">{s.sub}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
