@@ -28,7 +28,9 @@ function Deposit() {
         </span>
         <h2 className="mt-4 font-display text-xl font-bold">Fiat deposits are not supported</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Royal Chain Wallet currently focuses on self-custody cryptocurrency. Bank transfers, mobile-money deposits, card top-ups, and fiat settlement are not connected. This page will not generate a fake deposit receipt or increase your balance.
+          Royal Chain Wallet currently focuses on self-custody cryptocurrency. Bank transfers,
+          mobile-money deposits, card top-ups, and fiat settlement are not connected. This page will
+          not generate a fake deposit receipt or increase your balance.
         </p>
         <Link
           to="/app/receive"

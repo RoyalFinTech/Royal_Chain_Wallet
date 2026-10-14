@@ -51,7 +51,9 @@ export function WalletStrip() {
   }
 
   const primaryAddress = wallet.addresses.solana.address;
-  const liveNetworkCount = (["bitcoin", "ethereum", "bnb", "solana"] as const).filter(isChainLive).length;
+  const liveNetworkCount = (["bitcoin", "ethereum", "bnb", "solana"] as const).filter(
+    isChainLive,
+  ).length;
 
   const copy = async () => {
     try {
@@ -93,7 +95,9 @@ export function WalletStrip() {
         ) : portfolio.isError ? (
           <p className="font-display text-sm text-destructive">Unable to load balance</p>
         ) : liveNetworkCount === 0 ? (
-          <p className="font-display text-lg font-bold text-foreground">Network data not connected</p>
+          <p className="font-display text-lg font-bold text-foreground">
+            Network data not connected
+          </p>
         ) : (
           <p className="font-display text-3xl font-bold text-gold-shimmer">
             $
@@ -117,7 +121,8 @@ export function WalletStrip() {
           {shortenAddress(primaryAddress, 6, 6)}
         </button>
         <p className="mt-1 text-[10px] text-muted-foreground">
-          {liveNetworkCount}/4 native networks connected · market prices are estimates until a live price feed is set
+          {liveNetworkCount}/4 native networks connected · market prices are estimates until a live
+          price feed is set
         </p>
       </div>
 
