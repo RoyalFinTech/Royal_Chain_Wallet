@@ -10,7 +10,7 @@ import { isChainLive, chainEndpoint } from "@/lib/config/chains";
 import { getSolBalance, getSlot, getHealth, requireRpcUrl } from "./rpc/solana-rpc";
 
 export async function getBalance(address: string): Promise<AssetBalance> {
-  const priced = sampleMarketData(address, "SOL");
+  const priced = sampleMarketData("SOL");
   if (!isChainLive("solana")) {
     return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
   }
