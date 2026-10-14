@@ -23,7 +23,7 @@ import { WalletStrip } from "@/components/wallet/WalletStrip";
 import { ThemeToggle } from "@/components/brand/ThemeToggle";
 import { MOCK_TRANSACTIONS, SPEND_DATA, INCOME_DATA, formatMoney } from "@/lib/mock-data";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { DEMO_IDENTITY } from "@/lib/wallet-identity";
+import { useStoredWallet } from "@/hooks/use-wallet";
 import {
   CURRENCY_LIST,
   type CurrencyCode,
@@ -75,6 +75,11 @@ const quickActions = [
 
 function Dashboard() {
   const [currency, setCurrency] = useState<CurrencyCode>("USD");
+  const storedWallet = useStoredWallet();
+  const solanaAddress = storedWallet?.addresses.solana.address;
+  const walletLabel = solanaAddress
+    ? `RCW-${solanaAddress.slice(-8, -4).toUpperCase()}-${solanaAddress.slice(-4).toUpperCase()}`
+    : "No wallet created";
   const loadingFeed = useSimulatedLoading(650);
   const loadingCurrencies = useSimulatedLoading(500);
   const loadingBalance = useSimulatedLoading(600);
@@ -90,9 +95,9 @@ function Dashboard() {
           </div>
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">{greet()},</p>
-            <p className="truncate font-display text-base font-bold">Fatoumata Njie</p>
+            <p className="truncate font-display text-base font-bold">Your Royal Wallet</p>
             <p className="mt-0.5 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-              <span>{DEMO_IDENTITY.walletId}</span>
+              <span>{walletLabel}</span>
               <span className="inline-flex items-center gap-0.5 rounded-full bg-success/15 px-1.5 py-0.5 text-success">
                 <ShieldCheck className="h-2.5 w-2.5" /> Protected
               </span>
