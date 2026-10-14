@@ -72,7 +72,7 @@ function SendMoney() {
 
   const validateAddress = (a: string) => VALIDATORS[symbol](a);
   const addressOk = recipient.trim().length > 0 && validateAddress(recipient.trim());
-  const amountOk = Number(amount) > 0 && Number(amount) <= balance;
+  const amountOk = Number(amount) > 0 && total <= balance;
   const pinOk = /^\d{6}$/.test(pin);
 
   async function broadcast() {
@@ -252,7 +252,11 @@ function SendMoney() {
 
             {!amountOk && amount && (
               <p className="mt-2 text-xs text-destructive">
-                {Number(amount) > balance ? "Insufficient balance" : "Enter a valid amount"}
+                {Number(amount) > balance
+                  ? "Insufficient balance"
+                  : total > balance
+                    ? "Reserve enough crypto for the estimated network fee"
+                    : "Enter a valid amount"}
               </p>
             )}
 
@@ -287,6 +291,9 @@ function SendMoney() {
                 <Line label="To" value={shortenAddress(recipient, 6, 6)} />
                 {note && <Line label="Comment" value={note} />}
                 <Line label="Est. network fee" value={`~${fee} ${symbol}`} />
+                <p className="text-[10px] leading-4 text-muted-foreground">
+                  Fee is an estimate; the network or UTXO fee calculation may differ. Confirm the final transaction details before signing.
+                </p>
                 <Line label="Total" value={`${total.toFixed(6)} ${symbol}`} bold />
               </div>
               <div className="mt-4 flex items-center gap-2 rounded-2xl bg-success/10 p-3 text-xs text-success">
