@@ -18,7 +18,7 @@ export const listNotifications = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data: input, context }) => {
-    let query = context.db.from("notifications").select("*").eq("user_id", context.userId);
+    let query = context.db.from("notifications").select("*").eq("user_id", context.profileId);
     if (input.unreadOnly) query = query.eq("read", false);
     const { data, error } = await query
       .order("created_at", { ascending: false })
@@ -35,7 +35,7 @@ export const markNotificationRead = createServerFn({ method: "POST" })
       .from("notifications")
       .update({ read: true })
       .eq("id", input.notificationId)
-      .eq("user_id", context.userId);
+      .eq("user_id", context.profileId);
     if (error) throw new Error(error.message);
     return { updated: true };
   });
@@ -46,7 +46,7 @@ export const markAllNotificationsRead = createServerFn({ method: "POST" })
     const { error } = await context.db
       .from("notifications")
       .update({ read: true })
-      .eq("user_id", context.userId)
+      .eq("user_id", context.profileId)
       .eq("read", false);
     if (error) throw new Error(error.message);
     return { updated: true };
