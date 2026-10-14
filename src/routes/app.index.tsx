@@ -21,9 +21,9 @@ import { WalletCard } from "@/components/wallet/WalletCard";
 import { TransactionCard } from "@/components/wallet/TransactionCard";
 import { WalletStrip } from "@/components/wallet/WalletStrip";
 import { ThemeToggle } from "@/components/brand/ThemeToggle";
-import { MOCK_TRANSACTIONS, SPEND_DATA, INCOME_DATA, formatMoney } from "@/lib/mock-data";
+import { SPEND_DATA, INCOME_DATA, formatMoney } from "@/lib/mock-data";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { useStoredWallet } from "@/hooks/use-wallet";
+import { useStoredWallet, useTransactionHistory } from "@/hooks/use-wallet";
 import {
   CURRENCY_LIST,
   type CurrencyCode,
@@ -80,7 +80,7 @@ function Dashboard() {
   const walletLabel = solanaAddress
     ? `RCW-${solanaAddress.slice(-8, -4).toUpperCase()}-${solanaAddress.slice(-4).toUpperCase()}`
     : "No wallet created";
-  const loadingFeed = useSimulatedLoading(650);
+  const txHistory = useTransactionHistory(storedWallet);
   const loadingCurrencies = useSimulatedLoading(500);
   const loadingBalance = useSimulatedLoading(600);
   const loadingInsights = useSimulatedLoading(800);
@@ -136,6 +136,13 @@ function Dashboard() {
         ) : (
           <WalletCard currency={currency} onCurrencyChange={setCurrency} />
         )}
+      </div>
+
+      <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        <p className="text-[11px] leading-5 text-muted-foreground">
+          Preview data: fiat conversions, market trends, and some portfolio UI values are illustrative until a live price provider is configured. Network balances are shown as zero when their RPC is not configured. Transfers do not simulate success.
+        </p>
       </div>
 
       {/* Currency strip */}
@@ -226,10 +233,10 @@ function Dashboard() {
           </Link>
         </div>
         <div className="space-y-2">
-          {loadingFeed ? (
+          {txHistory.isLoading ? (
             <TransactionListSkeleton rows={4} />
-          ) : (
-            MOCK_TRANSACTIONS.slice(0, 4).map((tx, i) => (
+          ) : (txHistory.data ?? []).length > 0 ? (
+            (txHistory.data ?? []).slice(0, 4).map((tx, i) => (
               <div
                 key={tx.id}
                 className="animate-fade-in"
@@ -238,6 +245,13 @@ function Dashboard() {
                 <TransactionCard tx={tx} />
               </div>
             ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border bg-card p-4">
+              <p className="text-sm font-semibold">No transaction activity to show</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                This build does not yet index incoming on-chain activity. Transactions are only listed here when the app has a real hash from a live chain operation.
+              </p>
+            </div>
           )}
         </div>
       </section>
