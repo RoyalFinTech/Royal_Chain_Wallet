@@ -15,6 +15,14 @@ create policy users_update_own on public.users for update to authenticated
   using (auth_user_id = (select auth.uid()))
   with check (auth_user_id = (select auth.uid()));
 
+-- RLS restricts which row a user may access; column privileges additionally
+-- prevent self-assignment of kyc_status or other security-sensitive fields.
+-- ensureProfile only writes these two insertable columns. The auth trigger
+-- runs as its owner and can still populate its full profile row.
+revoke insert, update, delete on public.users from public, anon, authenticated;
+grant insert (auth_user_id, email) on public.users to authenticated;
+grant update (preferred_currency, preferred_locale) on public.users to authenticated;
+
 -- Create a profile at Auth signup, including when email confirmation means
 -- no authenticated browser session exists yet. Existing accounts without a
 -- profile are provisioned by ensureProfile at sign-in.
