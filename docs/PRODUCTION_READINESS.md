@@ -1,4 +1,20 @@
-# Production Readiness Report — Phase 9
+# Production Readiness Report — historic verification plus 2026-10-14 follow-up
+
+> **Current assessment: NOT production-ready.** This document preserves evidence collected in earlier phases; see the dated update below before treating any older status statement as current.
+
+## 2026-10-14 follow-up — current release gate
+
+- A read-only inspection of the active Supabase project reports migration history versions **1–10**, while this repository contains source SQL for migrations 1–4 and proposed migration 11. Recover and reconcile exact SQL for migrations 5–10 against the live schema, privileges, functions, and RLS before applying any database change. **Migration 11 has not been applied.**
+- Native transfers now fail closed when the chain RPC is not configured, when the asset has no implemented signing path, or when the wallet is not unlocked. The signer-derived source address is checked against the selected sender, and amount/recipient validation runs before signing.
+- Formerly fabricated transaction hashes, “confirmed” statuses, token balances, swap results, staking positions/rewards, NFT holdings, fiat deposits, and admin activity have been removed or gated. The UI shows empty/not-connected states when integrations are absent.
+- Receive QR codes now use a real QR encoder and actual local wallet addresses. The shared logo is self-hosted at `/royal-chain-wallet-logo.svg` instead of relying on a deployment-specific Lovable asset URL.
+- The client-facing transaction recording endpoint now rejects ledger writes until a trusted server-side chain verifier is configured. Proposed migration 11 restricts the authoritative ledger procedure to `service_role`, requires a verified hash and confirmed status, and includes atomic wallet/account creation. These are source changes only; no live migration was executed.
+- WalletConnect has no real dApp/relay test yet; no chain testnet broadcast has been performed. ROY minting and SPL token transfers are not ready.
+- Check current-head CI and Render status before treating this branch as build-verified. Older green CI runs predate these changes.
+
+## Historical Phase 9 notes — evidence, not current live status
+
+The original Phase 9 review used a local disposable PostgreSQL instance and unit tests. It did not prove live database permissions, live RLS behavior, or real blockchain broadcasts. Older statements below about live schema, migration history, or RLS are observations from that earlier review and are superseded by the 2026-10-14 update above.
 
 ## Correction of a false premise in the Phase 9 request
 
@@ -30,7 +46,7 @@ them actually requires.
 | EVM transaction signing/nonce handling under real network conditions | ⛔ No | Code uses ethers.js's `Wallet.sendTransaction`, a mature and widely-used implementation, but has not been exercised against a live node |
 | Bitcoin UTXO selection + PSBT broadcast under real network conditions | ⛔ No | Same reason — the UTXO-selection logic is new and hand-written (unlike EVM's ethers.js reliance); this is the least-tested piece of new code this phase |
 | Live database queries (Supabase) | ⛔ No | Same network/credential restrictions as every prior phase |
-| RLS policies restricting cross-user access | ⛔ No | Still zero policies (deny-all by default) — nothing to test |
+| RLS policies restricting cross-user access | ⚠️ Not fully verified | The older review reported zero policies; the later live project history has migrations 1–10 and must be audited table-by-table against missing SQL sources 5–10. Proposed migration 11 is not applied. |
 
 ## Specific, honest risk callouts
 
@@ -52,13 +68,11 @@ them actually requires.
    funds, since both re-fetch a fresh nonce/UTXO set on each call. This
    was a deliberate safety trade-off, not an oversight — flagging it so
    it isn't mistaken for "retry logic not implemented yet."
-4. **SPL token transfers (ROY/USDT/USDC) are NOT wired to real signing.**
-   Only native-asset transfers (BTC/ETH/BNB/SOL) go through the real
-   signing path; token sends still use the simulated flow. Building this
-   correctly requires associated-token-account derivation and the SPL
-   Token program's Transfer instruction — scoped out of this pass rather
-   than rushed under time pressure given the money-risk of getting a new
-   binary protocol wrong. See `docs/REMAINING_WORK.md`.
+4. **SPL token transfers (ROY/USDT/USDC) are not wired to real signing.**
+   Token balances now return an empty/unconfigured state rather than mock
+   holdings, and transfers fail closed. Building this correctly requires
+   verified mint addresses, associated-token-account logic, SPL Token
+   instructions, and on-chain testing. See `docs/REMAINING_WORK.md`.
 
 ## Is this production ready?
 
