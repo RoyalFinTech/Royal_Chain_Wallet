@@ -8,7 +8,7 @@
 - Draft PR #1 remains open and unmerged: https://github.com/RoyalFinTech/Royal_Chain_Wallet/pull/1.
 - Added GitHub Actions workflow `.github/workflows/qa.yml` for typecheck, tests, lint and production build.
 - Initial `npm ci` failed because the committed lockfile missed `lru-cache@11.5.3`. CI synchronized it in commit `c45d092`.
-- Latest checked run at commit `23ee0ebe5b0947992cdffcce9a60f9173ffab27f` passed install, TypeScript typecheck, unit tests, lint and production build. This is CI verification, not a live integration or security certification.
+- Checked run at commit `23ee0ebe5b0947992cdffcce9a60f9173ffab27f` passed install, TypeScript typecheck, unit tests, lint and production build. This is CI verification, not a live integration or security certification. Subsequent environment-file hygiene, Render config and engineering-log commits triggered newer runs; latest head `082f703f2ddc8643cdc08174f6ef8a202bf945ec` was pending at the last check and must be green before claiming current-head verification.
 - CI run: https://github.com/RoyalFinTech/Royal_Chain_Wallet/actions/runs/38592625049.
 
 ### Wallet recovery and WalletConnect
@@ -34,7 +34,7 @@
 - Preview URL: https://royal-chain-wallet-preview.onrender.com.
 - Render dashboard: https://dashboard.render.com/web/srv-db7qlrbrjlhs73cm4ppg.
 - Branch: `security/tx-hardening-2026-10-14`; build command `npm ci && npm run build`; start command `npm start`; Node runtime, Frankfurt region, free plan.
-- Initial deployment `dep-db7qlrrrjlhs73cm4sug` was in `build_in_progress` at the time this log was written. Deployment and HTTP smoke test are still pending.
+- Initial deployment `dep-db7qlrrrjlhs73cm4sug` succeeded and is live on the initial blueprint commit. Render build logs show `npm run build` succeeded and `npm start` launched `.output/server/index.mjs`, listening on port 10000. A later documentation commit triggered deployment `dep-db7qm586v3gs73etbe9g`, which was still building at the last check. The public URL is recorded above; an independent HTTP smoke request could not be made from this execution environment because outbound DNS/network access was unavailable.
 - Only public Supabase URL/project ref/publishable key are configured as preview variables. No service-role key or wallet secret was supplied or stored.
 - Existing unrelated Render services were left unchanged.
 
