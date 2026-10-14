@@ -38,6 +38,10 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/security/')
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
+      - name: Apply non-breaking dependency security fixes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/security/tx-hardening-2026-10-14'
+        run: npm audit fix --package-lock-only --ignore-scripts --no-fund --no-progress
+
       - name: Install dependencies
         run: npm ci
 
