@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import bs58 from "bs58";
 import { toast } from "sonner";
 import { ArrowLeft, Link2, X, Check, Loader2, ShieldAlert, Globe, Plug, Camera } from "lucide-react";
 import { useStoredWallet } from "@/hooks/use-wallet";
@@ -50,6 +51,7 @@ function WalletConnectPage() {
   const scanTimerRef = useRef<number | null>(null);
   const requestSupported =
     !!request && ["personal_sign", "solana_signMessage"].includes(request.method);
+  const requestMessage = request && requestSupported ? getMessagePreview(request) : null;
 
   useEffect(() => {
     if (!configured) return;
@@ -420,9 +422,24 @@ function WalletConnectPage() {
                 This method is not supported safely in this build. Do not approve it; reject the request. No transaction will be sent by this wallet.
               </div>
             ) : (
-              <label className="mt-4 block text-xs font-medium text-muted-foreground">
-                Enter your PIN to approve this message signature
-              </label>
+              <>
+                <div className="mt-3 rounded-2xl border border-border bg-muted/30 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Network</p>
+                  <p className="mt-1 break-all font-mono text-xs">{request.chainId}</p>
+                  <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Address requested</p>
+                  <p className="mt-1 break-all font-mono text-xs">{requestMessage?.address ?? "Not supplied by the dApp"}</p>
+                  <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Exact message to sign</p>
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-background p-3 font-mono text-xs">{requestMessage?.message ?? "Unable to decode this message safely."}</pre>
+                  {requestMessage?.warning && <p className="mt-2 text-[11px] text-amber-700">{requestMessage.warning}</p>}
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">View raw request parameters</summary>
+                    <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-background p-2 font-mono text-[10px]">{JSON.stringify(request.params, null, 2)}</pre>
+                  </details>
+                </div>
+                <label className="mt-4 block text-xs font-medium text-muted-foreground">
+                  Enter your PIN to approve this message signature
+                </label>
+              </>
             )}
             <input
               type="password"
@@ -461,3 +478,58 @@ function WalletConnectPage() {
     </div>
   );
 }
+type MessagePreview = { message: string; address: string | null; warning?: string };
+
+function getMessagePreview(request: PendingRequest): MessagePreview {
+  const decodeText = (bytes: Uint8Array): { message: string; warning?: string } => {
+    const message = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    const replacementCount = (message.match(/\\uFFFD/g) ?? []).length;
+    const controlCount = Array.from(message).filter(
+      (char) => char.charCodeAt(0) < 32 && char !== "\\n" && char !== "\\r" && char !== "\\t",
+    ).length;
+    if (replacementCount > 0 || controlCount > 0) {
+      return {
+        message: `Binary or non-text message (\\${bytes.length} bytes). Review the raw request parameters below before deciding.`,
+        warning: "The message is not clean readable UTF-8. Do not approve unless you understand the raw payload.",
+      };
+    }
+    const maxLength = 4000;
+    return {
+      message: message.length > maxLength ? `${message.slice(0, maxLength)}\\n… [truncated in view; signing uses the complete payload]` : message,
+      warning: message.length > maxLength ? "Only the first 4,000 characters are shown; the signature covers the complete message." : undefined,
+    };
+  };
+
+  if (request.method === "personal_sign" && Array.isArray(request.params)) {
+    const payload = request.params[0];
+    const address = typeof request.params[1] === "string" ? request.params[1] as string : null;
+    if (typeof payload !== "string") {
+      return { message: "Unsupported message parameters.", address, warning: "This request will not be signed." };
+    }
+    if (/^0x[0-9a-fA-F]*$/.test(payload) && payload.length % 2 === 0) {
+      const hex = payload.slice(2);
+      const bytes = Uint8Array.from(hex.match(/.{2}/g)?.map((byte) => Number.parseInt(byte, 16)) ?? []);
+      return { ...decodeText(bytes), address };
+    }
+    return { ...decodeText(new TextEncoder().encode(payload)), address };
+  }
+
+  if (
+    request.method === "solana_signMessage" &&
+    typeof request.params === "object" && request.params !== null && "message" in request.params
+  ) {
+    const params = request.params as { message?: unknown; pubkey?: unknown };
+    const address = typeof params.pubkey === "string" ? params.pubkey : null;
+    if (typeof params.message !== "string" || params.message.length === 0) {
+      return { message: "Unsupported message parameters.", address, warning: "This request will not be signed." };
+    }
+    try {
+      return { ...decodeText(bs58.decode(params.message)), address };
+    } catch {
+      return { message: "Could not decode the Solana message.", address, warning: "Reject this request because the message payload could not be decoded." };
+    }
+  }
+
+  return { message: "Unsupported method.", address: null, warning: "This request will not be signed." };
+}
+
