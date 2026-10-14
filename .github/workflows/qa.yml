@@ -38,6 +38,10 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/security/')
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
+      - name: Refresh vulnerable transitive packages within declared semver ranges
+        if: github.event_name == 'push' && github.ref == 'refs/heads/security/tx-hardening-2026-10-14'
+        run: npm update vitest browserslist baseline-browser-mapping brace-expansion js-yaml nanoid postcss seroval shell-quote source-map-js --package-lock-only --ignore-scripts --no-audit --no-fund
+
       - name: Install dependencies
         run: npm ci
 
