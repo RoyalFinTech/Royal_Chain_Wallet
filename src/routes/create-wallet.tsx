@@ -14,8 +14,6 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { NetworkGrid } from "@/components/brand/FxEffects";
-import { CURRENCY_LIST, type CurrencyCode } from "@/lib/currencies";
-import { COUNTRIES } from "@/lib/mock-data";
 import { importWallet, shortenAddress, validateMnemonic } from "@/lib/wallet";
 import { deriveAllChains, generateMnemonic, type DerivedAddresses } from "@/lib/wallet/derive";
 
@@ -36,13 +34,6 @@ function CreateWallet() {
   const [reveal, setReveal] = useState(false);
   const [pin, setPin] = useState(Array(6).fill(""));
   const [confirmPin, setConfirmPin] = useState(Array(6).fill(""));
-  const [profile, setProfile] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    country: COUNTRIES[0].code,
-    currency: "USD" as CurrencyCode,
-  });
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -380,85 +371,35 @@ function CreateWallet() {
           )}
 
           {step === 5 && (
-            <div className="animate-in fade-in slide-in-from-bottom-3 duration-400">
-              <h1 className="font-display text-2xl font-bold">Profile setup</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Optional — helps personalize your wallet.
+            <div className="animate-in fade-in slide-in-from-bottom-3 duration-400 text-center">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-success/15 text-success">
+                <Check className="h-8 w-8" />
+              </div>
+              <h1 className="mt-4 font-display text-2xl font-bold">Your Royal Wallet is secured</h1>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Your recovery phrase has been encrypted locally with your PIN. This wallet derives public addresses for Bitcoin, Ethereum, BNB Chain, and Solana. No profile, bank account, or fiat balance is required to use the crypto wallet.
               </p>
 
-              <div className="mt-5 space-y-3">
-                <Field
-                  label="Full name"
-                  value={profile.name}
-                  onChange={(v) => setProfile({ ...profile, name: v })}
-                  placeholder="Your full name"
-                />
-                <Field
-                  label="Phone number"
-                  value={profile.phone}
-                  onChange={(v) => setProfile({ ...profile, phone: v })}
-                  placeholder="+220 3xx xxx xxx"
-                />
-                <Field
-                  label="Email"
-                  type="email"
-                  value={profile.email}
-                  onChange={(v) => setProfile({ ...profile, email: v })}
-                  placeholder="you@example.com"
-                />
-
-                <div className="grid grid-cols-2 gap-3">
-                  <label>
-                    <span className="text-xs font-medium text-muted-foreground">Country</span>
-                    <select
-                      value={profile.country}
-                      onChange={(e) => setProfile({ ...profile, country: e.target.value })}
-                      className="mt-1 h-12 w-full rounded-2xl border border-border bg-input/40 px-3 text-sm"
-                    >
-                      {COUNTRIES.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.flag} {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span className="text-xs font-medium text-muted-foreground">Currency</span>
-                    <select
-                      value={profile.currency}
-                      onChange={(e) =>
-                        setProfile({ ...profile, currency: e.target.value as CurrencyCode })
-                      }
-                      className="mt-1 h-12 w-full rounded-2xl border border-border bg-input/40 px-3 text-sm"
-                    >
-                      {CURRENCY_LIST.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.flag} {c.code}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+              {preview && (
+                <div className="mt-5 space-y-2 text-left text-xs">
+                  <IdRow label="Bitcoin" value={shortenAddress(preview.addresses.bitcoin.address, 7, 7)} mono />
+                  <IdRow label="Ethereum / BNB" value={shortenAddress(preview.addresses.ethereum.address, 7, 7)} mono />
+                  <IdRow label="Solana" value={shortenAddress(preview.addresses.solana.address, 7, 7)} mono />
                 </div>
+              )}
+
+              <div className="mt-5 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3 text-left text-xs leading-5 text-muted-foreground">
+                <p className="font-semibold text-foreground">Before you continue</p>
+                <p className="mt-1">Keep your recovery phrase offline. Network balances and transfers will be available only when the corresponding chain integration is configured and verified.</p>
               </div>
 
-              <div className="mt-6 flex items-center gap-2 rounded-2xl bg-success/10 p-3 text-xs text-success">
-                <ShieldCheck className="h-4 w-4" /> Your wallet is encrypted end-to-end.
-              </div>
-
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => navigate({ to: "/app" })}
-                  className="grid h-14 flex-1 place-items-center rounded-2xl border border-border bg-card font-semibold text-foreground"
-                >
-                  Skip
-                </button>
-                <button
-                  onClick={() => navigate({ to: "/app" })}
-                  className="grid h-14 flex-1 place-items-center rounded-2xl gradient-gold font-semibold text-navy shadow-glow"
-                >
-                  Enter Wallet
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/app" })}
+                className="mt-6 grid h-14 w-full place-items-center rounded-2xl gradient-gold font-semibold text-navy shadow-glow"
+              >
+                Open Royal Chain Wallet <ArrowRight className="ml-2 inline h-4 w-4" />
+              </button>
             </div>
           )}
         </div>
@@ -482,28 +423,6 @@ function IdRow({ label, value, mono = false }: { label: string; value: string; m
         {value}
       </span>
     </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  ...rest
-}: { label: string; value: string; onChange: (v: string) => void } & Omit<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  "value" | "onChange"
->) {
-  return (
-    <label className="block">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <input
-        {...rest}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 h-12 w-full rounded-2xl border border-border bg-input/40 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/60"
-      />
-    </label>
   );
 }
 
