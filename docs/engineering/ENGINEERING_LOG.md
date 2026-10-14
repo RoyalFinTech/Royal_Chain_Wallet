@@ -65,3 +65,24 @@
 - WalletConnect transaction signing stays disabled; no real dApp relay test has been run.
 - Latest CI run for pre-follow-up commit `2b7305a566518a3d1a3d91942881670a33020346` passed typecheck, tests, lint and build: https://github.com/RoyalFinTech/Royal_Chain_Wallet/actions/runs/38596973005. This result predates the fixes planned below.
 - Render preview service is live at https://royal-chain-wallet-preview.onrender.com. Previous deployment build and server startup succeeded. The next source commits will trigger deployments automatically.
+
+## 2026-10-14 — Implementation results after screenshot-driven audit
+
+### Implemented on this branch
+- Fixed the wallet-creation derivation dependency by importing browser `Buffer` directly and installing the global buffer synchronously before browser HD/key derivation runs. The create-wallet route validates the BIP-39 phrase and address outputs, logs a sanitized failure cause (never phrase/key material), and provides a retry button.
+- Replaced the proxy-hosted logo URL with a repository-owned `public/royal-chain-wallet-logo.svg`; shared wordmark and app footer use the common logo component. Onboarding was rewritten for a self-custody multi-chain crypto wallet and uses real photographic imagery rather than promises of fiat, biometrics, fraud monitoring or instant payment rails that aren't implemented.
+- Replaced decorative fake QR blocks with actual QR encoding of the selected local wallet address. Copy/share/save controls perform browser actions. WalletConnect scanning reads a dApp URI only; it is not a payment confirmation.
+- Removed fake success/fabricated hashes for unconfigured native sends and unsupported SPL-token transfers. Chain signing now checks positive finite amounts, recipient format and that the derived sender address matches the local wallet. If confirmation polling times out after a broadcast, the UI preserves the hash and asks the user to inspect the explorer rather than implying the funds never left.
+- Removed generated balances and transaction/NFT history from the dashboard/activity pages; native assets show zero or an unconnected state when RPCs are absent. Dashboard trend values, USD prices and portfolio estimates are explicitly marked as sample values.
+- Swap now remains a preview, with live routing disabled; fiat exchange, fiat deposits, staking, NFT transfer, ROY mint/burn and fake admin screens are disabled instead of reporting a successful operation without an on-chain transaction.
+- Profile now lists the actual local Bitcoin/Ethereum/BNB/Solana public addresses and their copy actions. The legacy wallet/fiat pages and security/alerts pages no longer fabricate a member identity, fiat pockets, devices, logins, price alerts or security history.
+- Notifications controls are labeled as local preview preferences; push/email delivery and persistence remain unimplemented.
+- Native-chain crypto asset page is now distinct from the removed fiat wallet view. ROY/USDT/USDC balances are empty/not-connected until a real SPL reader and verified mints exist.
+- Proposed migration 11 was hardened in source to limit authoritative ledger posting to `service_role`, require a verified tx hash and confirmed status, and introduce an atomic wallet/account creation RPC. The authenticated browser-facing transaction-record endpoint now fails closed pending a real server-side chain verifier. The wallet server function uses the new atomic RPC.
+
+### Verification boundaries and open defects
+- No migration was applied to Supabase. The project history reports versions 1–10 while repository SQL source for versions 5–10 is missing. Recover and reconcile those migrations before considering proposed migration 11.
+- No on-chain testnet broadcast, real WalletConnect relay/dApp test, or real merchant checkout has been performed. RPCs, live price feed, SPL token readers/transfers, on-chain ROY mint and audited mint authority, swaps, stake program, NFT indexer, notification delivery, and merchant API/authentication remain unimplemented.
+- A merchant API key was not generated; a usable key requires server-side merchant auth, scoped credentials, hashed-at-rest storage, revocation/rotation, idempotency/replay handling, audit logging and verified payment callbacks.
+- The new source has had CI runs triggered, but the current-head CI run must complete green after formatting before claiming a passing current-head build. The latest Render deploy must also finish and the preview must be smoke-tested in a browser; previous successful deploys do not verify the newest source.
+- User balances and transaction history should not be taken as production facts. The dashboard labels estimated USD/trend figures as illustrative; a trusted live pricing provider and chain indexer are still required.
