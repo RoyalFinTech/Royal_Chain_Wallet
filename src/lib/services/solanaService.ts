@@ -22,7 +22,9 @@ import { getSolBalance, getSlot, getHealth, requireRpcUrl } from "./rpc/solana-r
 
 export async function getBalance(address: string): Promise<AssetBalance> {
   const priced = mockBalance(address, "SOL"); // price/change still mock — see file header
-  if (!isChainLive("solana")) return priced;
+  if (!isChainLive("solana")) {
+    return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
+  }
 
   const rpcUrl = requireRpcUrl(chainEndpoint("solana"), "Solana");
   const { sol } = await getSolBalance(rpcUrl, address);
