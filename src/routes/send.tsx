@@ -292,7 +292,8 @@ function SendMoney() {
                 {note && <Line label="Comment" value={note} />}
                 <Line label="Est. network fee" value={`~${fee} ${symbol}`} />
                 <p className="text-[10px] leading-4 text-muted-foreground">
-                  Fee is an estimate; the network or UTXO fee calculation may differ. Confirm the final transaction details before signing.
+                  Fee is an estimate; the network or UTXO fee calculation may differ. Confirm the
+                  final transaction details before signing.
                 </p>
                 <Line label="Total" value={`${total.toFixed(6)} ${symbol}`} bold />
               </div>

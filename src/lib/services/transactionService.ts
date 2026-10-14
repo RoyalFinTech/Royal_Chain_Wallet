@@ -51,7 +51,10 @@ export async function submitTransfer(opts: {
     );
   }
   if (!Number.isFinite(opts.amount) || opts.amount <= 0) {
-    throw new AppError("validation_error", "Transfer amount must be a finite number greater than zero.");
+    throw new AppError(
+      "validation_error",
+      "Transfer amount must be a finite number greater than zero.",
+    );
   }
   if (!Number.isFinite(opts.usdValue) || opts.usdValue < 0) {
     throw new AppError("validation_error", "The estimated USD value is invalid.");
