@@ -19,7 +19,7 @@ export const listTransactions = createServerFn({ method: "GET" })
       .from("wallets")
       .select("id")
       .eq("id", input.walletId)
-      .eq("user_id", context.userId)
+      .eq("user_id", context.profileId)
       .maybeSingle();
 
     if (walletError) {
@@ -75,7 +75,7 @@ export const recordTransaction = createServerFn({ method: "POST" })
       .from("wallets")
       .select("id")
       .eq("id", input.walletId)
-      .eq("user_id", context.userId)
+      .eq("user_id", context.profileId)
       .maybeSingle();
 
     if (walletError) {
