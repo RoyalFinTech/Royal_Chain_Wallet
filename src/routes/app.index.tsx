@@ -68,11 +68,26 @@ const greet = () => {
 
 const quickActions = [
   { to: "/send", label: "Send Crypto", icon: Send, color: "from-amber-400 to-yellow-600" },
-  { to: "/app/receive", label: "Receive", icon: ArrowDownToLine, color: "from-emerald-400 to-teal-600" },
+  {
+    to: "/app/receive",
+    label: "Receive",
+    icon: ArrowDownToLine,
+    color: "from-emerald-400 to-teal-600",
+  },
   { to: "/qr", label: "QR Tools", icon: QrCode, color: "from-orange-400 to-amber-600" },
   { to: "/app/tokens", label: "Tokens", icon: Wallet, color: "from-cyan-400 to-blue-600" },
-  { to: "/app/walletconnect", label: "WalletConnect", icon: ArrowLeftRight, color: "from-violet-400 to-purple-600" },
-  { to: "/app/transactions", label: "Activity", icon: Receipt, color: "from-blue-400 to-indigo-600" },
+  {
+    to: "/app/walletconnect",
+    label: "WalletConnect",
+    icon: ArrowLeftRight,
+    color: "from-violet-400 to-purple-600",
+  },
+  {
+    to: "/app/transactions",
+    label: "Activity",
+    icon: Receipt,
+    color: "from-blue-400 to-indigo-600",
+  },
   { to: "/app/swap", label: "Swap Preview", icon: Repeat, color: "from-rose-400 to-red-600" },
   { to: "/app/security", label: "Security", icon: Lock, color: "from-lime-400 to-green-600" },
 ];
@@ -134,29 +149,40 @@ function Dashboard() {
       <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
         <p className="text-[11px] leading-5 text-muted-foreground">
-          Network balances are shown only when the corresponding RPC is configured. USD prices and trend charts are sample estimates until a live market-data source is connected. Transfers never simulate success.
+          Network balances are shown only when the corresponding RPC is configured. USD prices and
+          trend charts are sample estimates until a live market-data source is connected. Transfers
+          never simulate success.
         </p>
       </div>
 
       <section className="mt-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold">Multi-chain assets</h2>
-          <Link to="/app/tokens" className="text-xs text-gold hover:underline">Token details</Link>
+          <Link to="/app/tokens" className="text-xs text-gold hover:underline">
+            Token details
+          </Link>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          {([
-            { symbol: "BTC", chain: "bitcoin", name: "Bitcoin" },
-            { symbol: "ETH", chain: "ethereum", name: "Ethereum" },
-            { symbol: "BNB", chain: "bnb", name: "BNB Chain" },
-            { symbol: "SOL", chain: "solana", name: "Solana" },
-          ] as const).map(({ symbol, chain, name }) => {
+          {(
+            [
+              { symbol: "BTC", chain: "bitcoin", name: "Bitcoin" },
+              { symbol: "ETH", chain: "ethereum", name: "Ethereum" },
+              { symbol: "BNB", chain: "bnb", name: "BNB Chain" },
+              { symbol: "SOL", chain: "solana", name: "Solana" },
+            ] as const
+          ).map(({ symbol, chain, name }) => {
             const meta = ASSET_CATALOG[symbol];
             const live = isChainLive(chain);
             const balance = portfolio.data?.assets.find((asset) => asset.symbol === symbol);
             return (
-              <div key={symbol} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+              <div
+                key={symbol}
+                className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+              >
                 <div className="flex items-center gap-2">
-                  <span className={`grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br ${meta.iconGradient} text-xs font-bold text-white`}>
+                  <span
+                    className={`grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br ${meta.iconGradient} text-xs font-bold text-white`}
+                  >
                     {symbol.slice(0, 1)}
                   </span>
                   <div className="min-w-0">
@@ -165,17 +191,27 @@ function Dashboard() {
                   </div>
                 </div>
                 <p className="mt-4 font-display text-lg font-bold">
-                  {!live ? "RPC not connected" : portfolio.isLoading ? "Loading…" : `${balance?.amount ?? 0} ${symbol}`}
+                  {!live
+                    ? "RPC not connected"
+                    : portfolio.isLoading
+                      ? "Loading…"
+                      : `${balance?.amount ?? 0} ${symbol}`}
                 </p>
                 <p className="mt-1 text-[10px] text-muted-foreground">
-                  {!live ? "No on-chain balance fetched" : portfolio.isError ? "Balance unavailable" : `USD value is estimated`}
+                  {!live
+                    ? "No on-chain balance fetched"
+                    : portfolio.isError
+                      ? "Balance unavailable"
+                      : `USD value is estimated`}
                 </p>
               </div>
             );
           })}
           <div className="rounded-2xl border border-dashed border-gold/40 bg-gold/5 p-4">
             <div className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-full gradient-gold text-xs font-bold text-navy">R</span>
+              <span className="grid h-9 w-9 place-items-center rounded-full gradient-gold text-xs font-bold text-navy">
+                R
+              </span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">Royal Token</p>
                 <p className="text-[10px] text-muted-foreground">ROY · planned SPL token</p>
