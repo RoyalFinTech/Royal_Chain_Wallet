@@ -10,6 +10,7 @@
  *
  * Browser-only.
  */
+import { Buffer } from "buffer";
 import * as bip39 from "bip39";
 import nacl from "tweetnacl";
 import { HDNodeWallet, Mnemonic as EthersMnemonic } from "ethers";
