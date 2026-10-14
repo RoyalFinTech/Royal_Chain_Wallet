@@ -187,7 +187,6 @@ export async function listActiveSessions(): Promise<
 export async function approveRequest(
   request: PendingRequest,
   mnemonic: string,
-  fromAddress: string,
 ): Promise<void> {
   const kit = await getWalletKit();
   let result: unknown;
