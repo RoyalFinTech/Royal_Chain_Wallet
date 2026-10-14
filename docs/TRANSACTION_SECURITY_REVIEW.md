@@ -3,7 +3,7 @@
 ## Changes in this branch
 
 - Authentication middleware verifies the Supabase token and resolves the corresponding `public.users.id` using `auth_user_id`. Database rows that reference `public.users(id)` are scoped by this profile ID; the Auth subject remains separate for JWT checks and rate-limit buckets.
-- The migration adds a unique mapping for `users.auth_user_id`, own-profile RLS policies, and a trigger that creates a profile row for new Auth users. Sign-up without a session returns a provisional profile shape and does not try to bypass RLS.
+- The migration adds a unique mapping for `users.auth_user_id`, own-profile RLS policies, and a trigger that creates a profile row for new Auth users. Column privileges restrict profile inserts to `auth_user_id`/`email` and updates to `preferred_currency`/`preferred_locale`, preventing self-assignment of `kyc_status`. Sign-up without a session returns a provisional profile shape and does not try to bypass RLS.
 - Transaction reads and writes explicitly verify ownership. Writes also check that the requested asset is active and matches the selected chain.
 - Transaction rate limiting now uses the request-authenticated Supabase client. If the rate-limit RPC fails or returns an invalid result, the write is blocked instead of silently allowed.
 - The database recording function verifies the Auth-to-profile mapping, wallet ownership, active asset/chain matching, pending-only initial status, two-entry ledger shape, account type and ownership, entry direction, per-entry amount, and balanced totals before performing the atomic insert.
