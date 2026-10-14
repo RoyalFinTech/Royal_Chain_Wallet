@@ -81,24 +81,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#0d1b2e" },
-      { title: "Royal Chain Wallet — One Wallet. Endless Possibilities." },
+      { title: "Royal Chain Wallet — Multi-Chain Crypto Wallet" },
       {
         name: "description",
         content:
-          "Premium digital wallet for everyday life. Send, receive, save and manage your money securely from one powerful wallet.",
+          "Self-custody cryptocurrency wallet for Bitcoin, Ethereum, BNB Chain and Solana. Manage locally encrypted wallet keys and review network-specific crypto transfers.",
       },
       { name: "author", content: "Royal FinTech Company" },
       { property: "og:title", content: "Royal Chain Wallet" },
       {
         property: "og:description",
-        content: "One Wallet. Endless Possibilities. Fast, secure and connected digital payments.",
+        content: "A self-custody multi-chain cryptocurrency wallet for Bitcoin, Ethereum, BNB Chain and Solana.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/royal-chain-wallet-logo.svg", type: "image/svg+xml" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
