@@ -1,12 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Wallet, ShieldAlert } from "lucide-react";
 import { useStoredWallet } from "@/hooks/use-wallet";
+import type { CurrencyCode } from "@/lib/currencies";
 
 interface WalletCardProps {
   walletId?: string;
   address?: string;
-  currency?: string;
-  onCurrencyChange?: (currency: never) => void;
+  currency?: CurrencyCode;
+  onCurrencyChange?: (currency: CurrencyCode) => void;
   balance?: number;
 }
 
