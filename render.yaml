@@ -1,0 +1,29 @@
+services:
+  - type: web
+    runtime: node
+    name: royal-chain-wallet-preview
+    plan: free
+    region: frankfurt
+    branch: security/tx-hardening-2026-10-14
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NITRO_PRESET
+        value: render-com
+      - key: HOST
+        value: 0.0.0.0
+      - key: VITE_APP_ENV
+        value: staging
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_PROJECT_ID
+        sync: false
+      - key: VITE_WALLETCONNECT_PROJECT_ID
+        sync: false
