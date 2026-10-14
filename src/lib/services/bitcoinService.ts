@@ -13,7 +13,7 @@ import {
 } from "./rpc/bitcoin-rpc";
 
 export async function getBalance(address: string): Promise<AssetBalance> {
-  const priced = sampleMarketData(address, "BTC");
+  const priced = sampleMarketData("BTC");
   if (!isChainLive("bitcoin")) {
     return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
   }
