@@ -13,7 +13,9 @@ import { getEvmBalance, getEvmBlockNumber, getEvmHealth, requireRpcUrl } from ".
 
 export async function getBalance(address: string): Promise<AssetBalance> {
   const priced = mockBalance(address, "BNB");
-  if (!isChainLive("bnb")) return priced;
+  if (!isChainLive("bnb")) {
+    return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
+  }
 
   const rpcUrl = requireRpcUrl(chainEndpoint("bnb"), "BNB Chain");
   const { ether } = await getEvmBalance(rpcUrl, address);
