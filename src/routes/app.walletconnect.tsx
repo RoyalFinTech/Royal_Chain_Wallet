@@ -193,10 +193,7 @@ function WalletConnectPage() {
     setBusy(true);
     try {
       const { mnemonic } = await unlockWallet(wallet, pin);
-      const fromAddress = request.chainId.startsWith("solana")
-        ? wallet.addresses.solana.address
-        : wallet.addresses.ethereum.address;
-      await approveRequest(request, mnemonic, fromAddress);
+      await approveRequest(request, mnemonic);
       toast.success("Request approved");
       setRequest(null);
       setPin("");
