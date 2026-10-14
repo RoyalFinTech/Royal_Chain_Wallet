@@ -57,7 +57,9 @@ function CreateWallet() {
     (async () => {
       try {
         if (!globalThis.crypto?.getRandomValues) {
-          throw new Error("Secure browser randomness is unavailable. Open this page over HTTPS in a supported browser.");
+          throw new Error(
+            "Secure browser randomness is unavailable. Open this page over HTTPS in a supported browser.",
+          );
         }
 
         const generatedMnemonic = generateMnemonic(128);
@@ -83,7 +85,9 @@ function CreateWallet() {
         // Log the cause only; never log a mnemonic or private key.
         console.error("[wallet] Recovery phrase/address generation failed:", reason);
         if (!cancelled) {
-          setGenError("Wallet generation failed. No wallet was saved. Check your connection and retry.");
+          setGenError(
+            "Wallet generation failed. No wallet was saved. Check your connection and retry.",
+          );
         }
       }
     })();
@@ -190,7 +194,11 @@ function CreateWallet() {
                   ) : (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   )}
-                  {preview ? "Wallet Preview Ready" : genError ? "Wallet generation failed" : "Generating your multi-chain wallet…"}
+                  {preview
+                    ? "Wallet Preview Ready"
+                    : genError
+                      ? "Wallet generation failed"
+                      : "Generating your multi-chain wallet…"}
                 </p>
                 {preview && (
                   <div className="mt-3 space-y-2 text-xs">

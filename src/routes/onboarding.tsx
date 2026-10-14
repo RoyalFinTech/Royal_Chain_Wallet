@@ -110,7 +110,8 @@ function Onboarding() {
               ))}
             </ul>
             <p className="mt-5 text-[11px] leading-5 text-white/45">
-              Cryptocurrency is volatile. You control your recovery phrase and are responsible for checking transaction details before signing.
+              Cryptocurrency is volatile. You control your recovery phrase and are responsible for
+              checking transaction details before signing.
             </p>
           </div>
 
@@ -187,10 +188,7 @@ function Onboarding() {
           )}
         </div>
         <div className="mt-5 text-center">
-          <Link
-            to="/auth/login"
-            className="text-xs text-white/55 transition hover:text-gold"
-          >
+          <Link to="/auth/login" className="text-xs text-white/55 transition hover:text-gold">
             Already have a wallet? Sign in
           </Link>
         </div>
