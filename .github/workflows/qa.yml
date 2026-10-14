@@ -47,7 +47,8 @@ jobs:
         run: npx --yes npm@11 install --package-lock-only --ignore-scripts --no-audit --no-fund
 
       - name: Install dependencies
-        run: npm ci
+        # Use the same npm major used to resolve and refresh package-lock.json.
+        run: npx --yes npm@11 ci
 
       - name: Dependency audit summary (non-blocking)
         # Print package-level advisory metadata for review without running
