@@ -60,23 +60,20 @@ export const createWalletRecord = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: input, context }) => {
     // The mnemonic/private keys are never sent to the server.
-    const { data: wallet, error: walletErr } = await context.db
-      .from("wallets")
-      .insert({ user_id: context.profileId, label: input.label, is_primary: true })
-      .select("*")
-      .single();
-    if (walletErr) throw new Error(walletErr.message);
-
-    const { error: accountsErr } = await context.db.from("wallet_accounts").insert(
-      input.accounts.map((a) => ({
-        wallet_id: wallet.id,
-        chain: a.chain,
-        address: a.address,
-        derivation_path: a.derivationPath,
+    // A single database function inserts the wallet and all public chain
+    // accounts atomically; a failed account insert rolls the wallet back.
+    const { data: wallet, error } = await context.db.rpc("create_wallet_with_accounts", {
+      p_label: input.label,
+      p_accounts: input.accounts.map((account) => ({
+        chain: account.chain,
+        address: account.address,
+        derivationPath: account.derivationPath,
       })),
-    );
-    if (accountsErr)
-      throw new Error("Wallet was created, but account setup failed. Contact support.");
+    });
 
+    if (error) {
+      console.error("[wallet] Atomic wallet creation failed:", error.message);
+      throw new Error("Unable to create the wallet and its chain accounts.");
+    }
     return wallet;
   });
