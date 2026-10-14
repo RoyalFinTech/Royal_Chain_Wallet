@@ -3,9 +3,7 @@
  * Chain-agnostic wrapper — each chain's "check status" call is injected,
  * this module only owns the polling/retry/timeout policy.
  */
-import { NetworkError, AppError } from "@/lib/errors/types";
-
-export type ConfirmationOutcome = "confirmed" | "failed";
+export type ConfirmationOutcome = "confirmed" | "failed" | "pending";
 
 export interface PollOptions {
   timeoutMs?: number;
@@ -39,17 +37,15 @@ export async function pollForConfirmation(
     } catch (e) {
       consecutiveFailures++;
       if (consecutiveFailures >= 3) {
-        throw new NetworkError(
-          `Confirmation polling failed 3 times in a row: ${e instanceof Error ? e.message : "unknown error"}`,
-        );
+        // Broadcasting already succeeded; the explorer hash must reach the
+        // caller even when the RPC cannot confirm it. Never make a timeout
+        // look like a safe-to-retry send.
+        return "pending";
       }
     }
     await new Promise((r) => setTimeout(r, intervalMs));
     intervalMs = Math.min(intervalMs * 1.5, maxIntervalMs);
   }
 
-  throw new AppError(
-    "timeout",
-    `Transaction not confirmed within ${Math.round(timeoutMs / 1000)}s. It may still confirm later — check the explorer before retrying.`,
-  );
+  return "pending";
 }
