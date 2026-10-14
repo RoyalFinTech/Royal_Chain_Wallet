@@ -1,12 +1,13 @@
 /**
  * Failed-login / brute-force protection (Module 9).
  *
- * Client-side rate limiting for PIN attempts. This is a real defense
- * layer today (it already stops rapid brute-forcing of the on-device PIN
- * before every attempt hits crypto.subtle) and maps directly onto the
- * `sessions`/`devices` server-side tracking once Authentication is wired
- * — same escalation curve, just also enforced server-side at that point.
+ * The PIN lockout is client-side because the PIN unlocks locally encrypted
+ * wallet material. Server-side transaction rate limiting is enforced by
+ * Postgres and must fail closed when that security control is unavailable.
  */
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/db/database.types";
 
 const STORAGE_KEY = "rcw.lockout";
 const MAX_ATTEMPTS = 5;
@@ -15,7 +16,7 @@ const BASE_LOCKOUT_MS = 30_000; // 30s, doubles each additional lockout
 interface LockoutState {
   attempts: number;
   lockedUntil: number | null;
-  lockoutCount: number; // how many times we've locked out, for escalating backoff
+  lockoutCount: number;
 }
 
 function read(): LockoutState {
@@ -68,31 +69,34 @@ export function clearLockout() {
 }
 
 /**
- * Server-enforced rate limiting via the `check_rate_limit` Postgres
- * function (supabase/migrations/00000000000002_rate_limiting.sql).
- * Complements the client-side lockout above: the client-side check stops
- * obvious brute-forcing instantly with zero network round-trip, while
- * this is the real enforcement point that applies no matter which
- * client calls in (web app, MCP server, a future mobile app).
+ * Server-enforced transaction rate limit. The authenticated request client
+ * is passed in explicitly; never use a cached anonymous client here because
+ * the database function must bind its quota bucket to auth.uid().
+ *
+ * Throws on RPC failure. Callers must not interpret an unavailable limiter
+ * as permission to record a financial transaction.
  */
 export async function checkServerRateLimit(
+  db: SupabaseClient<Database>,
   bucketKey: string,
   maxRequests: number,
   windowSeconds: number,
 ): Promise<boolean> {
-  const { getTypedSupabase } = await import("@/lib/db/typed-client");
-  const db = getTypedSupabase();
   const { data, error } = await db.rpc("check_rate_limit", {
     p_bucket_key: bucketKey,
     p_max_requests: maxRequests,
     p_window_seconds: windowSeconds,
   });
+
   if (error) {
-    // Fail open with a warning rather than blocking all traffic if the
-    // rate-limit migration/function isn't deployed yet — this must never
-    // become the reason a legitimate user is locked out.
-    console.warn("[rate-limit] check_rate_limit RPC unavailable, failing open:", error.message);
-    return true;
+    console.error("[rate-limit] check_rate_limit RPC failed; blocking transaction:", error.message);
+    throw new Error("Transaction rate limiting is unavailable. No transaction was recorded.");
   }
+
+  if (typeof data !== "boolean") {
+    console.error("[rate-limit] check_rate_limit returned an invalid response.");
+    throw new Error("Transaction rate limiting is unavailable. No transaction was recorded.");
+  }
+
   return data;
 }
