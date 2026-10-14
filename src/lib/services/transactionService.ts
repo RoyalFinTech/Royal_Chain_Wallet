@@ -77,11 +77,7 @@ export async function submitTransfer(opts: {
     usdValue: opts.usdValue,
     counterparty: `${opts.toAddress.slice(0, 4)}…${opts.toAddress.slice(-4)}`,
     status:
-      confirmation === "confirmed"
-        ? "confirmed"
-        : confirmation === "failed"
-          ? "failed"
-          : "pending",
+      confirmation === "confirmed" ? "confirmed" : confirmation === "failed" ? "failed" : "pending",
     timestamp: Date.now(),
     feeUsd: 0,
     hash: txHash,

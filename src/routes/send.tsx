@@ -51,7 +51,9 @@ function SendMoney() {
   const [error, setError] = useState<string | null>(null);
   const [broadcasting, setBroadcasting] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [confirmationStatus, setConfirmationStatus] = useState<"pending" | "confirmed" | "failed" | null>(null);
+  const [confirmationStatus, setConfirmationStatus] = useState<
+    "pending" | "confirmed" | "failed" | null
+  >(null);
 
   const symbol = asset?.symbol ?? "SOL";
   const meta = ASSET_CATALOG[symbol];
@@ -352,13 +354,18 @@ function SendMoney() {
               <AlertTriangle className="h-9 w-9" />
             </div>
             <h2 className="mt-5 font-display text-xl font-bold">
-              {confirmationStatus === "failed" ? "Network reported a failed transaction" : "Transaction not confirmed yet"}
+              {confirmationStatus === "failed"
+                ? "Network reported a failed transaction"
+                : "Transaction not confirmed yet"}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Do not send again yet. Check this transaction on the network explorer before retrying to avoid a duplicate transfer.
+              Do not send again yet. Check this transaction on the network explorer before retrying
+              to avoid a duplicate transfer.
             </p>
             <div className="mt-5 rounded-2xl border border-border bg-card p-4 text-left">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Transaction hash</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                Transaction hash
+              </p>
               <p className="mt-2 break-all font-mono text-xs">{txHash}</p>
             </div>
             {txHash && (
