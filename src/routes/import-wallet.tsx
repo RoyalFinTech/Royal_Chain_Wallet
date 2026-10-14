@@ -22,11 +22,13 @@ import { WalletSuccessCard } from "@/components/wallet/WalletSuccessCard";
 import { COUNTRIES } from "@/lib/mock-data";
 import { CURRENCY_LIST, type CurrencyCode } from "@/lib/currencies";
 import type { RoyalWalletIdentity } from "@/lib/wallet-identity";
+import type { DerivedAddresses } from "@/lib/wallet/derive";
 
 export const Route = createFileRoute("/import-wallet")({
   component: ImportWallet,
 });
 
+type ImportedWalletIdentity = RoyalWalletIdentity & { addresses: DerivedAddresses };
 type Method = "phrase" | "backup" | "key";
 type Step = "choose" | "input" | "restoring" | "security" | "success" | "profile" | "done";
 
@@ -53,7 +55,7 @@ function ImportWallet() {
   const [confirmPin, setConfirmPin] = useState("");
 
   const [error, setError] = useState<string | null>(null);
-  const [identity, setIdentity] = useState<RoyalWalletIdentity | null>(null);
+  const [identity, setIdentity] = useState<ImportedWalletIdentity | null>(null);
 
   // Session timeout — reset flow if idle too long while handling secrets.
   useEffect(() => {
@@ -125,6 +127,7 @@ function ImportWallet() {
         address: addr,
         recoveryPhrase: [],
         createdAt: new Date().toISOString(),
+        addresses,
       });
       setPin("");
       setConfirmPin("");
@@ -151,6 +154,7 @@ function ImportWallet() {
         // Do not retain the recovery phrase in the success-screen component.
         recoveryPhrase: [],
         createdAt: stored.createdAt,
+        addresses: stored.addresses,
       });
       setWords(Array(24).fill(""));
       setPin("");
@@ -595,12 +599,12 @@ function SuccessPanel({
   identity,
   onContinue,
 }: {
-  identity: RoyalWalletIdentity;
+  identity: ImportedWalletIdentity;
   onContinue: () => void;
 }) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-      <WalletSuccessCard walletId={identity.walletId} address={identity.address} />
+      <WalletSuccessCard walletId={identity.walletId} addresses={identity.addresses} />
       <button
         onClick={onContinue}
         className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl gradient-gold font-semibold text-navy shadow-glow transition hover:scale-[1.01]"
