@@ -57,6 +57,90 @@ drop policy if exists wallet_accounts_insert_own on public.wallet_accounts;
 create policy wallet_accounts_insert_own on public.wallet_accounts for insert to authenticated
   with check (exists (select 1 from public.wallets w join public.users u on u.id=w.user_id where w.id=wallet_accounts.wallet_id and u.auth_user_id=(select auth.uid())));
 
+-- Create the wallet shell and all of its public chain addresses atomically.
+-- This avoids orphan wallet rows if an account insert fails halfway through.
+create or replace function public.create_wallet_with_accounts(
+  p_label text,
+  p_accounts jsonb
+) returns public.wallets
+language plpgsql
+security definer
+set search_path = pg_catalog, public, auth
+as $wallet$
+declare
+  v_profile_id uuid;
+  v_wallet public.wallets;
+  v_entry jsonb;
+  v_chain text;
+  v_seen_chains text[] := array[]::text[];
+begin
+  if auth.uid() is null then
+    raise exception using errcode='42501', message='Authentication required';
+  end if;
+
+  select u.id into v_profile_id
+  from public.users u
+  where u.auth_user_id = auth.uid();
+
+  if v_profile_id is null then
+    raise exception using errcode='42501', message='User profile not found';
+  end if;
+
+  if p_label is null or length(btrim(p_label)) < 1 or length(btrim(p_label)) > 80 then
+    raise exception using errcode='22023', message='Wallet label must be 1 to 80 characters';
+  end if;
+
+  if p_accounts is null or jsonb_typeof(p_accounts) is distinct from 'array'
+     or jsonb_array_length(p_accounts) < 1 or jsonb_array_length(p_accounts) > 4 then
+    raise exception using errcode='22023', message='One to four chain accounts are required';
+  end if;
+
+  for v_entry in select value from jsonb_array_elements(p_accounts) as a(value) loop
+    if jsonb_typeof(v_entry) is distinct from 'object' then
+      raise exception using errcode='22023', message='Malformed wallet account';
+    end if;
+    v_chain := v_entry->>'chain';
+    if v_chain not in ('bitcoin','ethereum','bnb','solana') then
+      raise exception using errcode='22023', message='Unsupported wallet chain';
+    end if;
+    if v_chain = any(v_seen_chains) then
+      raise exception using errcode='22023', message='Duplicate chain accounts are not allowed';
+    end if;
+    if length(btrim(coalesce(v_entry->>'address',''))) < 1
+       or length(v_entry->>'address') > 256
+       or length(btrim(coalesce(v_entry->>'derivationPath',''))) < 1
+       or length(v_entry->>'derivationPath') > 128 then
+      raise exception using errcode='22023', message='Wallet account address or derivation path is invalid';
+    end if;
+    v_seen_chains := array_append(v_seen_chains, v_chain);
+  end loop;
+
+  update public.wallets
+  set is_primary = false
+  where user_id = v_profile_id and is_primary = true;
+
+  insert into public.wallets(user_id, label, is_primary)
+  values(v_profile_id, btrim(p_label), true)
+  returning * into v_wallet;
+
+  for v_entry in select value from jsonb_array_elements(p_accounts) as a(value) loop
+    insert into public.wallet_accounts(wallet_id, chain, address, derivation_path)
+    values(
+      v_wallet.id,
+      v_entry->>'chain',
+      btrim(v_entry->>'address'),
+      btrim(v_entry->>'derivationPath')
+    );
+  end loop;
+
+  return v_wallet;
+end;
+$wallet$;
+
+revoke all on function public.create_wallet_with_accounts(text,jsonb) from public, anon;
+grant execute on function public.create_wallet_with_accounts(text,jsonb) to authenticated;
+
+
 drop policy if exists transactions_select_own on public.transactions;
 create policy transactions_select_own on public.transactions for select to authenticated
   using (exists (select 1 from public.wallets w join public.users u on u.id=w.user_id where w.id=transactions.wallet_id and u.auth_user_id=(select auth.uid())));
