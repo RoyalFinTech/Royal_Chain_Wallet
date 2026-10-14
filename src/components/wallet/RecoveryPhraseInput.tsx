@@ -1,77 +1,14 @@
 import { useMemo } from "react";
 import { X } from "lucide-react";
 
-// Minimal BIP39-inspired suggestion dictionary (mock — a real integration
-// would ship the full BIP39 wordlist and validate against it).
-const SUGGESTION_WORDS = [
-  "royal",
-  "chain",
-  "wallet",
-  "secure",
-  "vault",
-  "harbor",
-  "signal",
-  "orbit",
-  "cipher",
-  "lantern",
-  "compass",
-  "ember",
-  "meadow",
-  "silver",
-  "granite",
-  "aurora",
-  "falcon",
-  "delta",
-  "echo",
-  "juniper",
-  "kestrel",
-  "onyx",
-  "quartz",
-  "sable",
-  "titan",
-  "verse",
-  "willow",
-  "zenith",
-  "nomad",
-  "cobalt",
-  "ivory",
-  "prism",
-  "harvest",
-  "canyon",
-  "phoenix",
-  "atlas",
-  "beacon",
-  "quantum",
-  "nova",
-  "solstice",
-  "helix",
-  "borealis",
-  "monarch",
-  "regal",
-  "sterling",
-  "ledger",
-  "keystone",
-  "obelisk",
-  "abandon",
-  "ability",
-  "able",
-  "about",
-  "above",
-  "absent",
-  "absorb",
-  "abstract",
-  "action",
-  "actor",
-  "adapt",
-  "admit",
-  "adult",
-  "advance",
-  "advice",
-  "aerobic",
-];
+// Use the complete official BIP-39 English wordlist. The wallet engine
+// still validates the full mnemonic checksum before restoring a wallet.
+import * as bip39 from "bip39";
+
+const ENGLISH_WORDS = new Set(bip39.wordlists.english);
 
 export function isKnownWord(w: string) {
-  return SUGGESTION_WORDS.includes(w.trim().toLowerCase());
+  return ENGLISH_WORDS.has(w.trim().toLowerCase());
 }
 
 interface Props {
