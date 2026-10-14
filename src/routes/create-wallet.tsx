@@ -16,7 +16,7 @@ import { Logo } from "@/components/brand/Logo";
 import { NetworkGrid } from "@/components/brand/FxEffects";
 import { CURRENCY_LIST, type CurrencyCode } from "@/lib/currencies";
 import { COUNTRIES } from "@/lib/mock-data";
-import { importWallet, shortenAddress } from "@/lib/wallet";
+import { importWallet, shortenAddress, validateMnemonic } from "@/lib/wallet";
 import { deriveAllChains, generateMnemonic, type DerivedAddresses } from "@/lib/wallet/derive";
 
 export const Route = createFileRoute("/create-wallet")({
@@ -32,6 +32,7 @@ function CreateWallet() {
   const [mnemonic, setMnemonic] = useState<string[] | null>(null);
   const [preview, setPreview] = useState<WalletPreview | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
+  const [generationAttempt, setGenerationAttempt] = useState(0);
   const [reveal, setReveal] = useState(false);
   const [pin, setPin] = useState(Array(6).fill(""));
   const [confirmPin, setConfirmPin] = useState(Array(6).fill(""));
@@ -49,22 +50,48 @@ function CreateWallet() {
   // Never write a wallet to storage until the user has chosen a personal PIN.
   useEffect(() => {
     let cancelled = false;
+    setGenError(null);
+    setPreview(null);
+    setMnemonic(null);
+
     (async () => {
       try {
+        if (!globalThis.crypto?.getRandomValues) {
+          throw new Error("Secure browser randomness is unavailable. Open this page over HTTPS in a supported browser.");
+        }
+
         const generatedMnemonic = generateMnemonic(128);
+        if (!validateMnemonic(generatedMnemonic)) {
+          throw new Error("The recovery phrase generator returned an invalid BIP-39 phrase.");
+        }
+
         const addresses = await deriveAllChains(generatedMnemonic);
+        if (
+          !addresses.bitcoin.address ||
+          !addresses.ethereum.address ||
+          !addresses.bnb.address ||
+          !addresses.solana.address
+        ) {
+          throw new Error("One or more blockchain addresses could not be derived.");
+        }
+
         if (cancelled) return;
         setMnemonic(generatedMnemonic.split(" "));
         setPreview({ addresses, wordCount: 12 });
       } catch (e) {
-        console.error(e);
-        if (!cancelled) setGenError("Could not generate a new wallet. Please retry.");
+        const reason = e instanceof Error ? e.message : "Unknown wallet-generation error";
+        // Log the cause only; never log a mnemonic or private key.
+        console.error("[wallet] Recovery phrase/address generation failed:", reason);
+        if (!cancelled) {
+          setGenError("Wallet generation failed. No wallet was saved. Check your connection and retry.");
+        }
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [generationAttempt]);
 
   const verifyIndices = useMemo(() => [2, 5, 8], []); // words #3, #6, #9
   const [verifyInputs, setVerifyInputs] = useState<Record<number, string>>({});
@@ -163,7 +190,7 @@ function CreateWallet() {
                   ) : (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   )}
-                  {preview ? "Wallet Preview Ready" : "Generating your multi-chain wallet…"}
+                  {preview ? "Wallet Preview Ready" : genError ? "Wallet generation failed" : "Generating your multi-chain wallet…"}
                 </p>
                 {preview && (
                   <div className="mt-3 space-y-2 text-xs">
@@ -186,7 +213,18 @@ function CreateWallet() {
                     <IdRow label="Recovery Words" value={`${preview.wordCount}-word phrase`} />
                   </div>
                 )}
-                {genError && <p className="mt-2 text-xs text-destructive">{genError}</p>}
+                {genError && (
+                  <div className="mt-3" role="alert">
+                    <p className="text-xs text-destructive">{genError}</p>
+                    <button
+                      type="button"
+                      onClick={() => setGenerationAttempt((attempt) => attempt + 1)}
+                      className="mt-3 inline-flex h-9 items-center justify-center rounded-xl border border-border bg-card px-3 text-xs font-semibold text-foreground transition hover:border-gold"
+                    >
+                      Retry wallet generation
+                    </button>
+                  </div>
+                )}
               </div>
 
               <button
