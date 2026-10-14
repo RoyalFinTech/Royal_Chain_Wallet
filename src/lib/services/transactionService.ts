@@ -13,6 +13,7 @@ import { mockTransactions } from "./mockData";
 import type { AssetSymbol, QuoteResult, TxRecord } from "./types";
 import { isChainLive } from "@/lib/config/chains";
 import { sendAndConfirm } from "@/lib/wallet/signing";
+import { AppError } from "@/lib/errors/types";
 import type { ChainId } from "@/lib/wallet/derive";
 
 const sessionTxs = new Map<string, TxRecord[]>();
@@ -30,13 +31,6 @@ export async function submitTransfer(opts: {
   chain: TxRecord["chain"];
   amount: number;
   usdValue: number;
-  /**
-   * The decrypted mnemonic, if the caller already unlocked the wallet
-   * for this operation (see unlockWallet in lib/wallet). Required for a
-   * real broadcast; omit to force the simulated flow (e.g. for
-   * SPL-token sends, which aren't wired to real signing yet — see
-   * docs/REMAINING_WORK.md).
-   */
   mnemonic?: string;
 }): Promise<TxRecord> {
   const isNativeAsset =
@@ -45,38 +39,35 @@ export async function submitTransfer(opts: {
     opts.symbol === "BNB" ||
     opts.symbol === "SOL";
 
-  if (opts.mnemonic && isNativeAsset && isChainLive(opts.chain as ChainId)) {
-    const { txHash, confirmation } = await sendAndConfirm({
-      chain: opts.chain as ChainId,
-      mnemonic: opts.mnemonic,
-      fromAddress: opts.fromAddress,
-      toAddress: opts.toAddress,
-      amount: opts.amount,
-    });
-    const record: TxRecord = {
-      id: `tx_${Date.now()}`,
-      chain: opts.chain,
-      symbol: opts.symbol,
-      direction: "out",
-      amount: opts.amount,
-      usdValue: opts.usdValue,
-      counterparty: `${opts.toAddress.slice(0, 4)}…${opts.toAddress.slice(-4)}`,
-      status: confirmation === "confirmed" ? "confirmed" : "failed",
-      timestamp: Date.now(),
-      feeUsd: 0, // real fee is embedded in the chain's own accounting; not separately tracked client-side yet
-      hash: txHash,
-    };
-    const existing = sessionTxs.get(opts.fromAddress) ?? [];
-    sessionTxs.set(opts.fromAddress, [record, ...existing]);
-    return record;
+  if (!opts.mnemonic) {
+    throw new AppError(
+      "unauthorized",
+      "Unlock the wallet before sending. No transaction was sent.",
+    );
   }
 
-  // Simulated fallback: chain not live, no mnemonic supplied, or an
-  // SPL-token asset (real SPL transfer signing isn't wired yet).
-  await new Promise((r) => setTimeout(r, 900 + Math.random() * 600));
-  const hash = Array.from({ length: 24 }, () => Math.floor(Math.random() * 16).toString(16)).join(
-    "",
-  );
+  if (!isNativeAsset) {
+    throw new AppError(
+      "not_configured",
+      `Transfers of ${opts.symbol} are disabled until the real token contract/mint and signing path are configured. No funds were sent.`,
+    );
+  }
+
+  if (!isChainLive(opts.chain as ChainId)) {
+    throw new AppError(
+      "not_configured",
+      `Live ${opts.chain} RPC is not configured. This wallet will not simulate a transfer or create a fake transaction hash. No funds were sent.`,
+    );
+  }
+
+  const { txHash, confirmation } = await sendAndConfirm({
+    chain: opts.chain as ChainId,
+    mnemonic: opts.mnemonic,
+    fromAddress: opts.fromAddress,
+    toAddress: opts.toAddress,
+    amount: opts.amount,
+  });
+
   const record: TxRecord = {
     id: `tx_${Date.now()}`,
     chain: opts.chain,
@@ -85,11 +76,17 @@ export async function submitTransfer(opts: {
     amount: opts.amount,
     usdValue: opts.usdValue,
     counterparty: `${opts.toAddress.slice(0, 4)}…${opts.toAddress.slice(-4)}`,
-    status: "confirmed",
+    status:
+      confirmation === "confirmed"
+        ? "confirmed"
+        : confirmation === "failed"
+          ? "failed"
+          : "pending",
     timestamp: Date.now(),
-    feeUsd: Number((Math.random() * 2 + 0.05).toFixed(2)),
-    hash,
+    feeUsd: 0,
+    hash: txHash,
   };
+
   const existing = sessionTxs.get(opts.fromAddress) ?? [];
   sessionTxs.set(opts.fromAddress, [record, ...existing]);
   return record;
