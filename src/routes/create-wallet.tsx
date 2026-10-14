@@ -16,19 +16,21 @@ import { Logo } from "@/components/brand/Logo";
 import { NetworkGrid } from "@/components/brand/FxEffects";
 import { CURRENCY_LIST, type CurrencyCode } from "@/lib/currencies";
 import { COUNTRIES } from "@/lib/mock-data";
-import { createWallet, importWallet, shortenAddress, type StoredWallet } from "@/lib/wallet";
+import { importWallet, shortenAddress } from "@/lib/wallet";
+import { deriveAllChains, generateMnemonic, type DerivedAddresses } from "@/lib/wallet/derive";
 
 export const Route = createFileRoute("/create-wallet")({
   component: CreateWallet,
 });
 
 type Step = 1 | 2 | 3 | 4 | 5;
+type WalletPreview = { addresses: DerivedAddresses; wordCount: 12 | 24 };
 
 function CreateWallet() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(1);
   const [mnemonic, setMnemonic] = useState<string[] | null>(null);
-  const [preview, setPreview] = useState<StoredWallet | null>(null);
+  const [preview, setPreview] = useState<WalletPreview | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
   const [reveal, setReveal] = useState(false);
   const [pin, setPin] = useState(Array(6).fill(""));
@@ -43,18 +45,17 @@ function CreateWallet() {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Generate a real 12-word BIP-39 mnemonic + derive real addresses on
-  // every chain (BTC, ETH, BNB, SOL). Uses a throwaway PIN just to derive
-  // addresses for display; the real encrypted wallet is written on step 4
-  // with the user's PIN.
+  // Generate the recovery phrase and derive preview addresses in memory only.
+  // Never write a wallet to storage until the user has chosen a personal PIN.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const { stored, mnemonic } = await createWallet("__preview__");
+        const generatedMnemonic = generateMnemonic(128);
+        const addresses = await deriveAllChains(generatedMnemonic);
         if (cancelled) return;
-        setMnemonic(mnemonic.split(" "));
-        setPreview(stored);
+        setMnemonic(generatedMnemonic.split(" "));
+        setPreview({ addresses, wordCount: 12 });
       } catch (e) {
         console.error(e);
         if (!cancelled) setGenError("Could not generate a new wallet. Please retry.");
@@ -89,7 +90,13 @@ function CreateWallet() {
     setSaving(true);
     try {
       const stored = await importWallet(mnemonic.join(" "), pin.join(""));
-      setPreview(stored);
+      setPreview({ addresses: stored.addresses, wordCount: stored.wordCount });
+      // Remove secrets from React component state once encrypted storage is written.
+      setMnemonic(null);
+      setVerifyInputs({});
+      setReveal(false);
+      setPin(Array(6).fill(""));
+      setConfirmPin(Array(6).fill(""));
       setStep(5);
     } catch (e) {
       console.error(e);
@@ -156,7 +163,7 @@ function CreateWallet() {
                   ) : (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   )}
-                  {preview ? "Wallet Created Successfully" : "Generating your multi-chain wallet…"}
+                  {preview ? "Wallet Preview Ready" : "Generating your multi-chain wallet…"}
                 </p>
                 {preview && (
                   <div className="mt-3 space-y-2 text-xs">
@@ -184,7 +191,8 @@ function CreateWallet() {
 
               <button
                 onClick={next}
-                className="mt-6 grid h-14 w-full place-items-center rounded-2xl gradient-gold font-semibold text-navy shadow-glow"
+                disabled={!preview || !mnemonic}
+                className="mt-6 grid h-14 w-full place-items-center rounded-2xl gradient-gold font-semibold text-navy shadow-glow disabled:opacity-50"
               >
                 Continue to Recovery <ArrowRight className="ml-2 inline h-4 w-4" />
               </button>
