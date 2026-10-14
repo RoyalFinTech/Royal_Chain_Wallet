@@ -22,6 +22,9 @@
  * risking a duplicate send.
  */
 import type { ChainId } from "./derive";
+import bs58 from "bs58";
+import { isAddress } from "ethers";
+import { isValidAddress as isValidBitcoinAddress } from "@/lib/services/bitcoinService";
 import { deriveSolanaSigningKey, deriveEvmSigningKey, deriveBitcoinSigningKey } from "./sign-keys";
 import { sendSolTransaction } from "@/lib/services/tx/solana-tx";
 import { sendEvmTransaction, checkEvmConfirmation } from "@/lib/services/tx/evm-tx";
@@ -54,6 +57,12 @@ export interface SendAndConfirmResult {
  * balance reads.
  */
 export async function sendAndConfirm(req: SendAndConfirmRequest): Promise<SendAndConfirmResult> {
+  if (!Number.isFinite(req.amount) || req.amount <= 0) {
+    throw new AppError("validation_error", "Transfer amount must be a finite number greater than zero.");
+  }
+  if (!req.fromAddress || !req.toAddress || req.fromAddress.trim() === "" || req.toAddress.trim() === "") {
+    throw new AppError("validation_error", "Sender and recipient addresses are required.");
+  }
   if (!isChainLive(req.chain)) {
     throw new AppError("not_configured", `${req.chain} has no RPC endpoint configured.`);
   }
@@ -62,6 +71,15 @@ export async function sendAndConfirm(req: SendAndConfirmRequest): Promise<SendAn
   switch (req.chain) {
     case "solana": {
       const key = await deriveSolanaSigningKey(req.mnemonic);
+      const derivedAddress = bs58.encode(key.publicKey);
+      if (derivedAddress !== req.fromAddress) {
+        throw new AppError("unauthorized", "The selected sender address does not match the unlocked recovery phrase.");
+      }
+      try {
+        if (bs58.decode(req.toAddress).length !== 32) throw new Error("bad address");
+      } catch {
+        throw new AppError("validation_error", "Recipient is not a valid Solana address.");
+      }
       const { txHash } = await sendSolTransaction(
         rpcUrl,
         key,
@@ -84,7 +102,13 @@ export async function sendAndConfirm(req: SendAndConfirmRequest): Promise<SendAn
     case "ethereum":
     case "bnb": {
       const key = await deriveEvmSigningKey(req.mnemonic);
-      const { txHash } = await sendEvmTransaction(rpcUrl, key, req.toAddress, req.amount);
+      if (key.address.toLowerCase() !== req.fromAddress.toLowerCase()) {
+        throw new AppError("unauthorized", "The selected sender address does not match the unlocked recovery phrase.");
+      }
+      if (!isAddress(req.toAddress.trim())) {
+        throw new AppError("validation_error", "Recipient is not a valid Ethereum-compatible address.");
+      }
+      const { txHash } = await sendEvmTransaction(rpcUrl, key, req.toAddress.trim(), req.amount);
       const confirmation = await pollForConfirmation(async () => {
         const status = await checkEvmConfirmation(rpcUrl, txHash);
         return status === "not_found" ? "not_found" : status;
@@ -94,7 +118,13 @@ export async function sendAndConfirm(req: SendAndConfirmRequest): Promise<SendAn
 
     case "bitcoin": {
       const key = await deriveBitcoinSigningKey(req.mnemonic);
-      const { txHash } = await sendBtcTransaction(rpcUrl, key, req.toAddress, req.amount);
+      if (key.address !== req.fromAddress) {
+        throw new AppError("unauthorized", "The selected sender address does not match the unlocked recovery phrase.");
+      }
+      if (!isValidBitcoinAddress(req.toAddress.trim())) {
+        throw new AppError("validation_error", "Recipient is not a valid Bitcoin address.");
+      }
+      const { txHash } = await sendBtcTransaction(rpcUrl, key, req.toAddress.trim(), req.amount);
       const confirmation = await pollForConfirmation(
         async () => {
           const status = await getBtcTxStatus(rpcUrl, txHash);
