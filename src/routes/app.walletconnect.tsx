@@ -120,7 +120,7 @@ function WalletConnectPage() {
           const results = await detector.detect(video);
           const rawValue = results.find((item) => item.rawValue)?.rawValue;
           if (rawValue) {
-            if (/^wc:[^?\\s]+@2\\?/.test(rawValue)) {
+            if (/^wc:[^?\s]+@2\?/.test(rawValue)) {
               setUri(rawValue);
               setScanNotice("WalletConnect URI scanned. Review it, then tap Connect to send the pairing request.");
               setScanning(false);
