@@ -54,12 +54,12 @@ Status key: **Open** = not fixed/verified; **Mitigated** = defensive code exists
 ## QA-011 — Render preview deployment
 - Status: In progress.
 - Service `royal-chain-wallet-preview` created in Royal's workspace, ID `srv-db7qlrbrjlhs73cm4ppg`, URL https://royal-chain-wallet-preview.onrender.com.
-- First deploy `dep-db7qlrrrjlhs73cm4sug` was building when recorded. Verify deploy result and run an HTTP/browser smoke test.
+- Initial deploy `dep-db7qlrrrjlhs73cm4sug` succeeded; build logs show the app started and listened on port 10000. A newer commit triggered deployment `dep-db7qm586v3gs73etbe9g`, still building at last check. Browser/HTTP smoke test remains open because outbound DNS access from this execution environment was unavailable.
 
 ## QA-012 — Current CI verification
-- Status: Verified for branch commit `23ee0ebe5b0947992cdffcce9a60f9173ffab27f` only.
+- Status: Verified for branch commit `23ee0ebe5b0947992cdffcce9a60f9173ffab27f` only; latest head is pending.
 - GitHub Actions run https://github.com/RoyalFinTech/Royal_Chain_Wallet/actions/runs/38592625049 passed dependency installation, typecheck, tests, lint and build.
-- Any later code change requires another green run; this is not a production security certification.
+- Latest branch head `082f703f2ddc8643cdc08174f6ef8a202bf945ec` had a pending workflow at last check. Any later code change requires another green run; this is not a production security certification.
 
 ## QA-013 — Ledger and wallet atomicity
 - Status: Open.
