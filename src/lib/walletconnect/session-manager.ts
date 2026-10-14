@@ -13,7 +13,7 @@
 import { getWalletKit } from "./client";
 import { EVM_CAIP2, BASE_CAIP2, SOLANA_CAIP2 } from "./chains";
 import type { DerivedAddresses } from "@/lib/wallet/derive";
-import { sendAndConfirm, signMessage } from "@/lib/wallet/signing";
+import { signMessage } from "@/lib/wallet/signing";
 import { logSecurityEvent } from "@/lib/security/audit";
 import { AppError } from "@/lib/errors/types";
 
@@ -125,13 +125,16 @@ export async function approveProposal(
     supportedNamespaces: {
       eip155: {
         chains: [EVM_CAIP2.ethereum, EVM_CAIP2.bnb, EVM_CAIP2.polygon, BASE_CAIP2],
-        methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData_v4"],
+        // Transaction and typed-data methods stay disabled until this wallet
+        // can faithfully validate and sign the exact requested payload.
+        methods: ["personal_sign"],
         events: ["chainChanged", "accountsChanged"],
         accounts: accounts.eip155,
       },
       solana: {
         chains: [SOLANA_CAIP2.mainnet],
-        methods: ["solana_signTransaction", "solana_signMessage"],
+        // Serialized Solana transaction signing is not implemented safely yet.
+        methods: ["solana_signMessage"],
         events: [],
         accounts: accounts.solana,
       },
@@ -191,28 +194,16 @@ export async function approveRequest(
 
   if (request.method === "personal_sign" || request.method === "solana_signMessage") {
     const chain = request.chainId.startsWith("solana") ? "solana" : "ethereum";
-    const message = extractMessageFromParams(request.params);
-    result = await signMessage(mnemonic, chain === "solana" ? "solana" : "ethereum", message);
-  } else if (
-    request.method === "eth_sendTransaction" ||
-    request.method === "solana_signTransaction"
-  ) {
-    const chainId: import("@/lib/wallet/derive").ChainId = request.chainId.startsWith("solana")
-      ? "solana"
-      : request.chainId === EVM_CAIP2.bnb
-        ? "bnb"
-        : "ethereum";
-    const { to, value } = extractTxFromParams(request.params);
-    const send = await sendAndConfirm({
-      chain: chainId,
-      mnemonic,
-      fromAddress,
-      toAddress: to,
-      amount: value,
-    });
-    result = send.txHash;
+    const message = await extractMessageFromParams(request.params, chain);
+    result = await signMessage(mnemonic, chain, message);
   } else {
-    throw new AppError("validation_error", `Unsupported WalletConnect method: ${request.method}`);
+    // In particular, do not turn eth_sendTransaction or the serialized
+    // solana_signTransaction payload into a new native transfer. Such a
+    // shortcut can sign/broadcast a different action than the dapp requested.
+    throw new AppError(
+      "validation_error",
+      `WalletConnect method ${request.method} is not supported safely yet. Reject this request.`,
+    );
   }
 
   await kit.respondSessionRequest({
@@ -235,15 +226,42 @@ export async function rejectRequest(request: PendingRequest): Promise<void> {
   logSecurityEvent("walletconnect.request_rejected", request.topic, { method: request.method });
 }
 
-function extractMessageFromParams(params: unknown): string {
-  // personal_sign params: [messageHex, address]. solana_signMessage: { message: base58/utf8 }.
-  if (Array.isArray(params) && typeof params[0] === "string") return params[0];
-  if (typeof params === "object" && params && "message" in params)
-    return String((params as { message: unknown }).message);
+async function extractMessageFromParams(
+  params: unknown,
+  chain: "solana" | "ethereum" | "bnb",
+): Promise<string | Uint8Array> {
+  // EVM personal_sign uses [hexData, address]. Sign the decoded bytes, not
+  // the UTF-8 characters of a 0x-prefixed hex string.
+  if (chain !== "solana" && Array.isArray(params) && typeof params[0] === "string") {
+    const payload = params[0];
+    if (payload.startsWith("0x")) {
+      const hex = payload.slice(2);
+      if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(hex)) {
+        throw new AppError("validation_error", "The personal_sign message is not valid hex data.");
+      }
+      return Uint8Array.from(hex.match(/.{2}/g)?.map((byte) => Number.parseInt(byte, 16)) ?? []);
+    }
+    return payload;
+  }
+
+  // The WalletConnect Solana adapter transmits its signMessage payload in
+  // base58 under params.message. Decode it back to the original bytes before
+  // signing, rather than signing the base58 text itself.
+  if (chain === "solana" && typeof params === "object" && params !== null && "message" in params) {
+    const message = (params as { message?: unknown }).message;
+    if (typeof message !== "string" || message.length === 0) {
+      throw new AppError("validation_error", "Could not parse the Solana message to sign.");
+    }
+    const bs58 = (await import("bs58")).default;
+    try {
+      return bs58.decode(message);
+    } catch {
+      throw new AppError("validation_error", "The Solana message is not valid base58 data.");
+    }
+  }
+
   throw new AppError("validation_error", "Could not parse the message to sign.");
 }
-
-function extractTxFromParams(params: unknown): { to: string; value: number } {
   // eth_sendTransaction params: [{ to, value (hex wei), ... }]. Amount conversion is a
   // placeholder — a real implementation needs full hex-wei -> ether parsing per asset decimals.
   if (Array.isArray(params) && typeof params[0] === "object") {
