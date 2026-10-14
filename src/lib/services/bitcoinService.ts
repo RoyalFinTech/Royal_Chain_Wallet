@@ -19,7 +19,9 @@ import {
 
 export async function getBalance(address: string): Promise<AssetBalance> {
   const priced = mockBalance(address, "BTC");
-  if (!isChainLive("bitcoin")) return priced;
+  if (!isChainLive("bitcoin")) {
+    return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
+  }
 
   const apiUrl = requireApiUrl(chainEndpoint("bitcoin"));
   const { btc } = await getBtcBalance(apiUrl, address);
