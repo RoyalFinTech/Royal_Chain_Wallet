@@ -1,50 +1,46 @@
 # Next Steps
 
-Last updated: 2026-10-14. Status is based on direct repository inspection and read-only checks of the connected services.
+Last updated: 2026-10-14.
 
-## Phase A — Protect recovery phrases first
+## 1. Confirm the Render preview
+1. Check deploy `dep-db7qlrrrjlhs73cm4sug` and fix build/runtime errors if any.
+2. Open https://royal-chain-wallet-preview.onrender.com and test the home route, server rendering, auth/config screens and browser console.
+3. Test WalletConnect scanner permissions on supported browsers and manual URI fallback on unsupported browsers.
+4. Confirm service env contains only required public config. Add WalletConnect project ID directly in Render settings if a real one is available; do not put it in Git or chat.
 
-1. **In progress:** Fix the create-wallet preview so mnemonic and derived addresses are generated in memory only. Do not persist until the user sets and confirms their own PIN.
-2. **In progress:** Remove the default `royal-chain` import PIN; require a new user-chosen PIN when restoring a valid BIP-39 phrase.
-3. Clear temporary PIN/recovery-phrase state after secure persistence and when the user exits/times out.
-4. Replace the partial mock phrase wordlist with the installed BIP-39 English wordlist and preserve checksum validation.
-5. Disable backup-file/private-key imports that are still simulated; do not claim restore success without decoding and verifying the real input.
-6. Remove static demo address/identity from real-wallet screens and real receive payloads. Show honest demo/no-wallet states if no wallet exists.
+## 2. Reconcile Supabase before migration
+1. Recover exact source SQL for already-applied migrations #5–#10.
+2. Compare functions, grants, RLS policies, triggers, constraints and indexes against the connected project.
+3. Apply all migrations to a disposable database and verify a clean reset.
+4. Test candidate #11 with two users, cross-user wallet/transaction/ledger attempts, invalid ledger entries, atomic rollback and concurrent rate limiting.
+5. Only after review and explicit approval, plan a production migration. Do not reset production or apply candidate #11 yet.
 
-## Phase B — Make WalletConnect/scanning safe
+## 3. Wallet key/recovery QA
+1. Verify generated phrases have fresh entropy and valid BIP-39 checksum for both 12 and 24 words.
+2. Verify wallet creation does not persist anything until PIN confirmation.
+3. Test restore with invalid checksum, wrong word, wrong PIN, PIN mismatch and successful unlock.
+4. Confirm no phrase/private key is sent to the server, logs, telemetry or crash reports.
+5. Implement actual encrypted-backup import only after its format is specified and tested; keep fake restore options disabled.
 
-1. Implement a real camera-backed QR decoder using feature detection/permission handling and a manual fallback; return scanned WalletConnect URIs to the WalletConnect page instead of the simulated merchant flow.
-2. Keep the WalletConnect project ID client-exposed only (it is a public project identifier, not a secret); do not ship server-side/secret API values with a `VITE_` prefix.
-3. Reject or hide unsupported `eth_sendTransaction`, `eth_signTypedData_v4`, and `solana_signTransaction` actions until full request-byte validation/chain-specific signing exists. Never translate a dapp request into a different native transfer.
-4. Add clear dapp/chain/method/decoded payload confirmation and re-check address/chain before signing.
-5. Write tests for QR URI validation, BIP-39 import, supported/unsupported WalletConnect methods, and transaction-parameter decoding.
-6. Test pairing/session proposals only after setting the project ID on a preview environment. Use no real funds; test transaction requests with testnet/devnet wallets.
+## 4. WalletConnect
+1. Validate EVM `personal_sign` and Solana `solana_signMessage` argument order/encoding against the exact supported adapter versions.
+2. Verify byte-for-byte that the message displayed is the payload signed.
+3. Pair with a controlled test dApp and test approve/reject, wrong signer, wrong chain, malformed URI and unsupported signing methods.
+4. Keep transaction and typed-data signing disabled until transaction parsing, human-readable review, chain-specific signing and test coverage are complete.
 
-## Phase C — Reconcile Supabase migration history
+## 5. Remaining product/engineering gaps
+1. Audit remaining demo identity, mock balances, transaction history, simulated token transfers and fallback behavior.
+2. Make wallet + wallet-account persistence atomic or add compensating cleanup and tests.
+3. Add real receive-address QR encoding with chain-specific URI formats; do not fake payment confirmations.
+4. Review Supabase advisor findings one by one; do not apply blanket grants or indexes without schema evidence.
 
-1. Recover the source SQL for already-applied migrations #5–#10 into the repository from project history/version control.
-2. Rename the proposed security migration to a new unique sequence after #10 and review the full diff.
-3. Decide/fix live rate-limit RPC security and reconcile the transaction RPC ACL with the chosen call path.
-4. Apply a candidate migration only to a disposable Supabase branch/local database first; test auth/profile mapping, RLS cross-user reads/writes, transaction integrity and rate-limit concurrency.
-5. After validation, run the Supabase security and performance advisors; document each finding and disposition.
-6. Only then request approval for any production migration.
-
-## Phase D — Render preview
-
-1. Confirm TanStack Start/Nitro build output and the Node-compatible run command. The repo currently has no `start` script; the default config is Cloudflare-oriented.
-2. Create a separate **staging/preview** web service in **Royal's workspace**, connected only to this repository and a QA branch. Do not change the three unrelated services.
-3. Use only required variables for the preview: Supabase project URL, publishable key, and WalletConnect project ID as applicable. All chain RPC values are optional until testnet coverage is ready.
-4. Ask the user to enter actual secrets directly in Render Dashboard/Environment (or use the connected Render secret update tool with values supplied through a secure channel). Do not paste service-role keys, wallet mnemonics, private keys, or other secrets into chat, logs, git, or a VITE-prefixed variable.
-5. Verify deploy status, root-page response, server logs, and QR/camera functionality; record the deployed branch/commit/service URL here and in the engineering log.
-
-## Exit criteria before a production claim
-
-- [ ] Wallet create never persists before PIN choice; import never uses shared/default PIN.
-- [ ] Standard BIP-39 12- and 24-word generation/import tested; bad checksum and invalid words rejected.
-- [ ] No static fake wallet identity/address presented as the user's live wallet.
-- [ ] QR scanner actually reads QR codes and handles denied camera permission.
-- [ ] WalletConnect transaction requests that are not correctly supported are rejected without broadcasting anything.
-- [ ] Repository migration history is reproducible and candidate SQL tested in disposable Supabase.
-- [ ] Rate limiting has identity binding, fixed quotas, safe ACLs and concurrency tests.
-- [ ] `npm run typecheck`, `npm test`, `npm run lint`, and `npm run build` run successfully and results are recorded.
-- [ ] Preview deploy is live and smoke-tested in Royal's workspace; production still requires separate approval.
+## Release gates
+- [ ] Latest branch head has green install/typecheck/tests/lint/build.
+- [ ] Render preview build and HTTP smoke tests pass.
+- [ ] Migrations #5–#10 recovered; clean reset matches live schema.
+- [ ] Candidate #11 passes disposable-database security and rollback tests.
+- [ ] Wallet create/import/PIN flows pass targeted tests.
+- [ ] WalletConnect controlled dApp integration passes and unsupported methods fail closed.
+- [ ] Remaining demo/simulation behavior is removed or clearly labelled.
+- [ ] No secrets are committed or placed in VITE_ variables unless designed to be public.
+- [ ] Production changes are reviewed and explicitly approved.
