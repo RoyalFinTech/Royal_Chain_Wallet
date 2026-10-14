@@ -72,7 +72,10 @@ function Ecosystem() {
 
       <div className="mt-6 space-y-4">
         {APPS.map((app) => (
-          <div key={app.id} className="overflow-hidden rounded-3xl border border-border bg-card shadow-soft">
+          <div
+            key={app.id}
+            className="overflow-hidden rounded-3xl border border-border bg-card shadow-soft"
+          >
             <div className={`bg-gradient-to-br ${app.gradient} p-5 text-white`}>
               <div className="flex items-start justify-between">
                 <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/15 backdrop-blur">
@@ -89,7 +92,10 @@ function Ecosystem() {
               <p className="text-sm leading-6 text-muted-foreground">{app.description}</p>
               <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs leading-5 text-muted-foreground">
                 <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                <p>No connect button is offered until there is a verified destination, a real integration, and a reviewed payment/signature flow.</p>
+                <p>
+                  No connect button is offered until there is a verified destination, a real
+                  integration, and a reviewed payment/signature flow.
+                </p>
               </div>
             </div>
           </div>
@@ -114,8 +120,9 @@ function Ecosystem() {
 
       <div className="mt-8 rounded-3xl border border-dashed border-border bg-card p-5 text-center">
         <p className="text-xs leading-5 text-muted-foreground">
-          Royal Play, MarketLink, and AMIS Properties are shown as planned or unverified integrations.
-          This screen does not establish a live connection, create a merchant API key, or confirm any payment.
+          Royal Play, MarketLink, and AMIS Properties are shown as planned or unverified
+          integrations. This screen does not establish a live connection, create a merchant API key,
+          or confirm any payment.
         </p>
       </div>
     </div>
