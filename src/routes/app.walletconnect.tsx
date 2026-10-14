@@ -52,6 +52,19 @@ function WalletConnectPage() {
   const requestSupported =
     !!request && ["personal_sign", "solana_signMessage"].includes(request.method);
   const requestMessage = request && requestSupported ? getMessagePreview(request) : null;
+  const expectedRequestAddress = request?.chainId.startsWith("solana")
+    ? wallet?.addresses.solana.address
+    : wallet?.addresses.ethereum.address;
+  const requestAddressMatchesWallet = Boolean(
+    requestMessage?.address &&
+      expectedRequestAddress &&
+      (request?.chainId.startsWith("solana")
+        ? requestMessage.address === expectedRequestAddress
+        : requestMessage.address.toLowerCase() === expectedRequestAddress.toLowerCase()),
+  );
+  const requestCanApprove = Boolean(
+    requestSupported && requestMessage?.canApprove && requestAddressMatchesWallet,
+  );
 
   useEffect(() => {
     if (!configured) return;
@@ -188,8 +201,8 @@ function WalletConnectPage() {
 
   async function handleApproveRequest() {
     if (!request || !wallet) return;
-    if (!requestSupported) {
-      toast.error("This WalletConnect signing method is not supported safely yet. Reject the request.");
+    if (!requestSupported || !requestMessage?.canApprove || !requestAddressMatchesWallet) {
+      toast.error("This signing request could not be safely verified. Reject the request.");
       return;
     }
     setBusy(true);
@@ -430,7 +443,13 @@ function WalletConnectPage() {
                   <p className="mt-1 break-all font-mono text-xs">{requestMessage?.address ?? "Not supplied by the dApp"}</p>
                   <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Exact message to sign</p>
                   <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-background p-3 font-mono text-xs">{requestMessage?.message ?? "Unable to decode this message safely."}</pre>
-                  {requestMessage?.warning && <p className="mt-2 text-[11px] text-amber-700">{requestMessage.warning}</p>}
+                  {(!requestAddressMatchesWallet || requestMessage?.warning) && (
+                    <p className="mt-2 text-[11px] text-amber-700">
+                      {!requestAddressMatchesWallet
+                        ? "The requested signing address does not match this wallet. Reject this request."
+                        : requestMessage?.warning}
+                    </p>
+                  )}
                   <details className="mt-3">
                     <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">View raw request parameters</summary>
                     <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-background p-2 font-mono text-[10px]">{JSON.stringify(request.params, null, 2)}</pre>
@@ -459,7 +478,7 @@ function WalletConnectPage() {
               </button>
               <button
                 onClick={() => void handleApproveRequest()}
-                disabled={pin.length !== 6 || busy || !requestSupported}
+                disabled={pin.length !== 6 || busy || !requestCanApprove}
                 className="grid h-12 flex-1 place-items-center rounded-2xl gradient-gold text-sm font-semibold text-navy shadow-glow disabled:opacity-50"
               >
                 {busy ? (
@@ -478,39 +497,52 @@ function WalletConnectPage() {
     </div>
   );
 }
-type MessagePreview = { message: string; address: string | null; warning?: string };
+type MessagePreview = { message: string; address: string | null; warning?: string; canApprove: boolean };
 
 function getMessagePreview(request: PendingRequest): MessagePreview {
-  const decodeText = (bytes: Uint8Array): { message: string; warning?: string } => {
+  const decodeText = (bytes: Uint8Array): { message: string; warning?: string; canApprove: boolean } => {
     const message = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-    const replacementCount = (message.match(/\\uFFFD/g) ?? []).length;
+    const replacementCount = Array.from(message).filter((char) => char.charCodeAt(0) === 0xfffd).length;
     const controlCount = Array.from(message).filter(
-      (char) => char.charCodeAt(0) < 32 && char !== "\\n" && char !== "\\r" && char !== "\\t",
+      (char) => char.charCodeAt(0) < 32 && char !== "\n" && char !== "\r" && char !== "\t",
     ).length;
+
     if (replacementCount > 0 || controlCount > 0) {
       return {
-        message: `Binary or non-text message (\\${bytes.length} bytes). Review the raw request parameters below before deciding.`,
-        warning: "The message is not clean readable UTF-8. Do not approve unless you understand the raw payload.",
+        message: "Binary or non-text message (" + bytes.length + " bytes).",
+        warning: "This payload cannot be reviewed as readable text in this build. Reject the request.",
+        canApprove: false,
       };
     }
+
     const maxLength = 4000;
-    return {
-      message: message.length > maxLength ? `${message.slice(0, maxLength)}\\n… [truncated in view; signing uses the complete payload]` : message,
-      warning: message.length > maxLength ? "Only the first 4,000 characters are shown; the signature covers the complete message." : undefined,
-    };
+    if (message.length > maxLength) {
+      return {
+        message: "This message exceeds the 4,000-character review limit. Reject the request.",
+        warning: "The wallet will not sign a message whose full contents cannot be shown here.",
+        canApprove: false,
+      };
+    }
+
+    return { message, canApprove: true };
   };
 
   if (request.method === "personal_sign" && Array.isArray(request.params)) {
     const payload = request.params[0];
     const address = typeof request.params[1] === "string" ? request.params[1] as string : null;
     if (typeof payload !== "string") {
-      return { message: "Unsupported message parameters.", address, warning: "This request will not be signed." };
+      return { message: "Unsupported message parameters.", address, warning: "This request will not be signed.", canApprove: false };
     }
-    if (/^0x[0-9a-fA-F]*$/.test(payload) && payload.length % 2 === 0) {
+
+    if (payload.startsWith("0x")) {
       const hex = payload.slice(2);
+      if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(hex)) {
+        return { message: "The message is not valid hex data.", address, warning: "Reject this request.", canApprove: false };
+      }
       const bytes = Uint8Array.from(hex.match(/.{2}/g)?.map((byte) => Number.parseInt(byte, 16)) ?? []);
       return { ...decodeText(bytes), address };
     }
+
     return { ...decodeText(new TextEncoder().encode(payload)), address };
   }
 
@@ -521,15 +553,16 @@ function getMessagePreview(request: PendingRequest): MessagePreview {
     const params = request.params as { message?: unknown; pubkey?: unknown };
     const address = typeof params.pubkey === "string" ? params.pubkey : null;
     if (typeof params.message !== "string" || params.message.length === 0) {
-      return { message: "Unsupported message parameters.", address, warning: "This request will not be signed." };
+      return { message: "Unsupported message parameters.", address, warning: "This request will not be signed.", canApprove: false };
     }
+
     try {
       return { ...decodeText(bs58.decode(params.message)), address };
     } catch {
-      return { message: "Could not decode the Solana message.", address, warning: "Reject this request because the message payload could not be decoded." };
+      return { message: "Could not decode the Solana message.", address, warning: "Reject this request because the payload could not be decoded.", canApprove: false };
     }
   }
 
-  return { message: "Unsupported method.", address: null, warning: "This request will not be signed." };
+  return { message: "Unsupported method.", address: null, warning: "This request will not be signed.", canApprove: false };
 }
 
