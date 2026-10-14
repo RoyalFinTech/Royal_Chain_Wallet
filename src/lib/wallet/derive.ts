@@ -13,6 +13,12 @@
  * Browser-only. Private keys never leave the device.
  */
 import { Buffer } from "buffer";
+// Make Buffer available before any browser crypto/HD-derivation library executes.
+// The former root useEffect polyfill ran too late relative to child route effects.
+if (typeof window !== "undefined") {
+  const bufferGlobal = globalThis as unknown as { Buffer?: typeof Buffer };
+  if (!bufferGlobal.Buffer) bufferGlobal.Buffer = Buffer;
+}
 import * as bip39 from "bip39";
 import nacl from "tweetnacl";
 import bs58 from "bs58";
