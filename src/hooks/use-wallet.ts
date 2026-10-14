@@ -1,5 +1,5 @@
 /**
- * React hooks around the on-device multi-chain wallet + demo chain data.
+ * React hooks around the on-device multi-chain wallet and chain service queries.
  */
 import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
