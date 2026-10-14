@@ -262,11 +262,3 @@ async function extractMessageFromParams(
 
   throw new AppError("validation_error", "Could not parse the message to sign.");
 }
-  // eth_sendTransaction params: [{ to, value (hex wei), ... }]. Amount conversion is a
-  // placeholder — a real implementation needs full hex-wei -> ether parsing per asset decimals.
-  if (Array.isArray(params) && typeof params[0] === "object") {
-    const p = params[0] as { to?: string; value?: string };
-    return { to: p.to ?? "", value: p.value ? Number(BigInt(p.value)) / 1e18 : 0 };
-  }
-  throw new AppError("validation_error", "Could not parse the transaction request.");
-}
