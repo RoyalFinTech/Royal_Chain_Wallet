@@ -18,10 +18,9 @@ const slides = [
       "Keys encrypted locally with your PIN",
     ],
     icon: Wallet,
-    image:
-      "https://images.pexels.com/photos/9577242/pexels-photo-9577242.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    imageAlt: "Close-up of a smartphone showing a blockchain wallet interface",
-    imageCredit: "Photo from Pexels",
+    image: "/royal-chain-wallet-onboarding.jpg",
+    imageAlt: "Royal Chain Wallet premium smartphone crypto dashboard with multi-chain icons, portfolio chart and QR code",
+    imageCredit: "Royal Chain Wallet artwork",
   },
   {
     title: "Your Keys. Your Responsibility.",
