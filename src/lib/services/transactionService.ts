@@ -34,6 +34,29 @@ export async function submitTransfer(opts: {
   usdValue: number;
   mnemonic?: string;
 }): Promise<TxRecord> {
+  const expectedChain: Record<AssetSymbol, ChainId> = {
+    BTC: "bitcoin",
+    ETH: "ethereum",
+    BNB: "bnb",
+    SOL: "solana",
+    ROY: "solana",
+    USDT: "solana",
+    USDC: "solana",
+  };
+
+  if (opts.chain !== expectedChain[opts.symbol]) {
+    throw new AppError(
+      "validation_error",
+      `Asset ${opts.symbol} does not belong to the selected ${opts.chain} network. No funds were sent.`,
+    );
+  }
+  if (!Number.isFinite(opts.amount) || opts.amount <= 0) {
+    throw new AppError("validation_error", "Transfer amount must be a finite number greater than zero.");
+  }
+  if (!Number.isFinite(opts.usdValue) || opts.usdValue < 0) {
+    throw new AppError("validation_error", "The estimated USD value is invalid.");
+  }
+
   const isNativeAsset =
     opts.symbol === "BTC" ||
     opts.symbol === "ETH" ||
