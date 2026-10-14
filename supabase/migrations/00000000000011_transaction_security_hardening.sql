@@ -88,14 +88,16 @@ declare
   v_user_direction text;
   v_system_direction text;
 begin
-  if auth.uid() is null then
-    raise exception using errcode='42501', message='Authentication required';
+  -- Ledger postings are financially authoritative. Only a trusted server
+  -- transaction verifier may call this SECURITY DEFINER function. Browser
+  -- clients can never assert that a blockchain transaction is confirmed.
+  if coalesce(auth.role(), '') <> 'service_role' then
+    raise exception using errcode='42501', message='Ledger posting requires a trusted server-side transaction verifier';
   end if;
   if p_wallet_id is null or not exists (
-    select 1 from public.wallets w join public.users u on u.id=w.user_id
-    where w.id=p_wallet_id and u.auth_user_id=auth.uid()
+    select 1 from public.wallets w where w.id=p_wallet_id
   ) then
-    raise exception using errcode='42501', message='Wallet not owned by authenticated user';
+    raise exception using errcode='22023', message='Wallet not found';
   end if;
   if p_amount is null or p_amount<=0 then
     raise exception using errcode='22023', message='Transaction amount must be positive';
@@ -104,8 +106,11 @@ begin
      or p_kind is null or p_kind not in ('transfer','deposit','withdrawal','merchant_payment','refund','reversal') then
     raise exception using errcode='22023', message='Invalid transaction direction or kind';
   end if;
-  if p_status is distinct from 'pending' then
-    raise exception using errcode='42501', message='New client transactions must be pending';
+  if p_status is distinct from 'confirmed' then
+    raise exception using errcode='42501', message='Only verified, confirmed transactions may post to the ledger';
+  end if;
+  if p_tx_hash is null or length(btrim(p_tx_hash)) = 0 then
+    raise exception using errcode='22023', message='A confirmed chain transaction hash is required';
   end if;
   if p_usd_value is not null and p_usd_value<0 then
     raise exception using errcode='22023', message='USD value cannot be negative';
@@ -186,8 +191,8 @@ end;
 $$;
 
 revoke all on function public.post_ledger_entries(uuid,jsonb) from public, anon, authenticated;
-revoke all on function public.record_transaction_with_ledger(uuid,uuid,text,text,text,numeric,text,jsonb,numeric,numeric,text,text,text) from public, anon;
-grant execute on function public.record_transaction_with_ledger(uuid,uuid,text,text,text,numeric,text,jsonb,numeric,numeric,text,text,text) to authenticated;
+revoke all on function public.record_transaction_with_ledger(uuid,uuid,text,text,text,numeric,text,jsonb,numeric,numeric,text,text,text) from public, anon, authenticated;
+grant execute on function public.record_transaction_with_ledger(uuid,uuid,text,text,text,numeric,text,jsonb,numeric,numeric,text,text,text) to service_role;
 
 -- Limit requests to a caller-owned bucket; serialize concurrent requests.
 create or replace function public.check_rate_limit(p_bucket_key text,p_max_requests int,p_window_seconds int)
