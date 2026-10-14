@@ -225,7 +225,9 @@ function Dashboard() {
       {/* Insights */}
       <section className="mt-8">
         <h2 className="mb-1 font-display text-lg font-bold">Crypto market preview</h2>
-        <p className="mb-3 text-[11px] text-muted-foreground">Illustrative 7-day trajectories · not live market data</p>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          Illustrative 7-day trajectories · not live market data
+        </p>
         {loadingInsights ? (
           <>
             <div className="grid grid-cols-2 gap-3">
@@ -254,7 +256,11 @@ function Dashboard() {
                 tone="down"
               />
             </div>
-<div className="mt-3 rounded-2xl border border-border bg-card p-3 text-xs leading-5 text-muted-foreground">Live spot prices, portfolio valuations, and historical charts need a market-data provider. These sample trajectories are visual previews only and should not be used to make trading decisions.</div>
+            <div className="mt-3 rounded-2xl border border-border bg-card p-3 text-xs leading-5 text-muted-foreground">
+              Live spot prices, portfolio valuations, and historical charts need a market-data
+              provider. These sample trajectories are visual previews only and should not be used to
+              make trading decisions.
+            </div>
           </>
         )}
       </section>
@@ -352,4 +358,3 @@ function InsightCard({
     </div>
   );
 }
-
