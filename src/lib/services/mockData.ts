@@ -1,12 +1,9 @@
 /**
- * Deterministic demo data generator.
+ * Sample market metadata and shared asset labels.
  *
- * Every value is derived from the wallet's own address via a seeded PRNG,
- * so balances/history look realistic, stay stable across reloads within
- * the same wallet, and differ between wallets — without ever touching a
- * network. This is the swap-out point: replace the functions in
- * bitcoinService / ethereumService / bnbService / solanaService /
- * tokenService with real provider calls and nothing else changes.
+ * This module must never be used as a source of balances or transaction
+ * history. The price values and 24-hour changes are illustrative only.
+ * Live balance values come from the chain-specific RPC/indexer services.
  */
 import type { AssetMeta, AssetSymbol, TxRecord, ChainId, NetworkStatus } from "./types";
 
@@ -104,34 +101,16 @@ function rngFor(address: string, symbol: string) {
   return mulberry32(seedFromString(`${address}:${symbol}`));
 }
 
-/** Deterministic mock balance for a given address + asset. */
-export function mockBalance(address: string, symbol: AssetSymbol) {
+/** Return illustrative price metadata only; never manufacture a balance. */
+export function sampleMarketData(address: string, symbol: AssetSymbol) {
   const rand = rngFor(address, symbol);
-  const price = BASE_USD_PRICE[symbol] * (0.94 + rand() * 0.12); // +/-6% live jitter
-  const isStable = symbol === "USDT" || symbol === "USDC";
-  const magnitude = isStable
-    ? 50 + rand() * 4500
-    : rand() *
-      rand() *
-      (symbol === "BTC"
-        ? 1.4
-        : symbol === "ETH"
-          ? 12
-          : symbol === "SOL"
-            ? 220
-            : symbol === "ROY"
-              ? 18000
-              : 30);
-  const amount = Number(
-    magnitude.toFixed(symbol === "BTC" ? 6 : symbol === "ETH" || symbol === "SOL" ? 4 : 2),
-  );
-  const change24hPct = Number(((rand() - 0.5) * 14).toFixed(2));
+  const price = BASE_USD_PRICE[symbol] * (0.94 + rand() * 0.12);
   return {
     symbol,
-    amount,
     usdPrice: Number(price.toFixed(price < 2 ? 4 : 2)),
-    usdValue: Number((amount * price).toFixed(2)),
-    change24hPct,
+    // Historical market movement is not connected, so do not fabricate a
+    // percent change. The dashboard's chart preview is labelled separately.
+    change24hPct: 0,
   };
 }
 
@@ -145,48 +124,4 @@ export function mockNetworkStatus(chain: ChainId): NetworkStatus {
     avgFeeUsd: 0,
     congestion: "moderate",
   };
-}
-
-const TX_MEMO_POOL = [
-  "Transfer",
-  "Payment received",
-  "Swap settlement",
-  "Staking reward",
-  "Card top-up",
-  "Merchant payment",
-  "P2P transfer",
-  "Withdrawal",
-];
-
-export function mockTransactions(address: string, symbols: AssetSymbol[], count = 12): TxRecord[] {
-  const rand = rngFor(address, "tx-history");
-  const out: TxRecord[] = [];
-  const now = Date.now();
-  for (let i = 0; i < count; i++) {
-    const symbol = symbols[Math.floor(rand() * symbols.length)];
-    const meta = ASSET_CATALOG[symbol];
-    const direction = rand() > 0.48 ? "in" : "out";
-    const price = BASE_USD_PRICE[symbol];
-    const amount = Number(
-      (
-        rand() * (symbol === "BTC" ? 0.3 : symbol === "ETH" ? 1.8 : symbol === "SOL" ? 14 : 250) +
-        0.001
-      ).toFixed(4),
-    );
-    const hash = Array.from({ length: 24 }, () => Math.floor(rand() * 16).toString(16)).join("");
-    out.push({
-      id: `tx_${address.slice(0, 6)}_${i}`,
-      chain: meta.chain,
-      symbol,
-      direction,
-      amount,
-      usdValue: Number((amount * price).toFixed(2)),
-      counterparty: `${hash.slice(0, 4)}…${hash.slice(-4)}`,
-      status: rand() > 0.93 ? "pending" : rand() > 0.02 ? "confirmed" : "failed",
-      timestamp: now - Math.floor(rand() * 45) * 86_400_000 - Math.floor(rand() * 86_400_000),
-      feeUsd: Number((rand() * 4).toFixed(2)),
-      hash,
-    });
-  }
-  return out.sort((a, b) => b.timestamp - a.timestamp);
 }
