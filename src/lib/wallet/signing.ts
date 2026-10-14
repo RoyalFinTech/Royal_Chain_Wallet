@@ -112,17 +112,20 @@ export async function sendAndConfirm(req: SendAndConfirmRequest): Promise<SendAn
 export async function signMessage(
   mnemonic: string,
   chain: "solana" | "ethereum" | "bnb",
-  message: string,
+  message: string | Uint8Array,
 ): Promise<string> {
+  // WalletConnect messages may already be protocol-encoded bytes. Preserve
+  // those bytes exactly; only encode plain application strings as UTF-8.
+  const payload = typeof message === "string" ? new TextEncoder().encode(message) : message;
   if (chain === "solana") {
     const nacl = (await import("tweetnacl")).default;
     const bs58 = (await import("bs58")).default;
     const key = await deriveSolanaSigningKey(mnemonic);
-    const sig = nacl.sign.detached(new TextEncoder().encode(message), key.secretKey);
+    const sig = nacl.sign.detached(payload, key.secretKey);
     return bs58.encode(sig);
   }
   const key = await deriveEvmSigningKey(mnemonic);
   const { Wallet } = await import("ethers");
   const wallet = new Wallet(key.privateKeyHex);
-  return wallet.signMessage(message);
+  return wallet.signMessage(payload);
 }
