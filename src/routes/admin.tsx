@@ -21,12 +21,21 @@ function AdminRootLayout() {
           <Logo size={48} withText />
         </div>
         <div className="mt-7 grid h-14 w-14 place-items-center rounded-2xl border border-amber-400/30 bg-amber-400/10 text-amber-300">
-          {isLoginPath ? <LockKeyhole className="h-7 w-7" /> : <AlertTriangle className="h-7 w-7" />}
+          {isLoginPath ? (
+            <LockKeyhole className="h-7 w-7" />
+          ) : (
+            <AlertTriangle className="h-7 w-7" />
+          )}
         </div>
-        <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.25em] text-gold">Restricted admin area</p>
+        <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.25em] text-gold">
+          Restricted admin area
+        </p>
         <h1 className="mt-2 font-display text-2xl font-bold">Admin access is not enabled</h1>
         <p className="mt-3 text-sm leading-6 text-white/70">
-          The current admin login and role selector are demo-only. They do not verify an administrator against a trusted server, and the dashboard figures are sample data. Admin and treasury pages are intentionally blocked until server-side authentication, role-based authorization, audit logging, and live data access are implemented.
+          The current admin login and role selector are demo-only. They do not verify an
+          administrator against a trusted server, and the dashboard figures are sample data. Admin
+          and treasury pages are intentionally blocked until server-side authentication, role-based
+          authorization, audit logging, and live data access are implemented.
         </p>
         <Link
           to="/"
