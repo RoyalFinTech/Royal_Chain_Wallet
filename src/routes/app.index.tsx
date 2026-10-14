@@ -17,7 +17,6 @@ import {
   ArrowLeftRight,
   Lock,
 } from "lucide-react";
-import { TransactionCard } from "@/components/wallet/TransactionCard";
 import { WalletStrip } from "@/components/wallet/WalletStrip";
 import { ThemeToggle } from "@/components/brand/ThemeToggle";
 import { Logo } from "@/components/brand/Logo";
@@ -309,10 +308,18 @@ function Dashboard() {
             (txHistory.data ?? []).slice(0, 4).map((tx, i) => (
               <div
                 key={tx.id}
-                className="animate-fade-in"
+                className="animate-fade-in flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3"
                 style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards" }}
               >
-                <TransactionCard tx={tx} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{tx.direction === "in" ? "Received" : "Sent"} {tx.symbol}</p>
+                  <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">{tx.hash}</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">{new Date(tx.timestamp).toLocaleString()}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-display text-sm font-bold">{tx.direction === "in" ? "+" : "−"}{tx.amount} {tx.symbol}</p>
+                  <p className={`mt-1 text-[10px] font-semibold ${tx.status === "confirmed" ? "text-success" : tx.status === "failed" ? "text-destructive" : "text-amber-600"}`}>{tx.status}</p>
+                </div>
               </div>
             ))
           ) : (
