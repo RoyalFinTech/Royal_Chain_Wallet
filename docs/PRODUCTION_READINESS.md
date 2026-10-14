@@ -10,7 +10,7 @@
 - Receive QR codes now use a real QR encoder and actual local wallet addresses. The shared logo is self-hosted at `/royal-chain-wallet-logo.svg` instead of relying on a deployment-specific Lovable asset URL.
 - The client-facing transaction recording endpoint now rejects ledger writes until a trusted server-side chain verifier is configured. Proposed migration 11 restricts the authoritative ledger procedure to `service_role`, requires a verified hash and confirmed status, and includes atomic wallet/account creation. These are source changes only; no live migration was executed.
 - WalletConnect has no real dApp/relay test yet; no chain testnet broadcast has been performed. ROY minting and SPL token transfers are not ready.
-- Check current-head CI and Render status before treating this branch as build-verified. Older green CI runs predate these changes.
+- For source snapshot `195ad7b8156cbc1ce37a9321134dce83eda519e9`, GitHub Actions run [38614435197](https://github.com/RoyalFinTech/Royal_Chain_Wallet/actions/runs/38614435197) passed typecheck, unit tests, lint and production build. The checked npm audit result is 0 vulnerabilities after compatible lockfile updates. Render deploy `dep-db7sg7h5efls73csj47g` is live for that snapshot. This is build/deploy verification only; a browser smoke test and live network/database checks remain outstanding.
 
 ## Historical Phase 9 notes — evidence, not current live status
 
@@ -23,10 +23,7 @@ authentication, RLS, ledger system, and documentation already exist,"
 and referenced tables (`profiles`, `ledger_accounts`, `ledger_entries`,
 `transfers`, `deposits`, `withdrawals`, `agents`, `merchants`, `kyc`,
 `currencies`, `exchange_rates`) that did not exist anywhere in this
-codebase before this phase. None of the migrations from any phase have
-been applied to a live database — this was true before Phase 9 and
-remains true after it. See `docs/DEPLOYMENT.md` Step 1 for what applying
-them actually requires.
+codebase before this phase. That was the understanding during the Phase 9 review. A later read-only inspection reported live migration history versions 1–10; this repository has source SQL only for migrations 1–4 plus proposed migration 11. The actual schema, policies and grants for versions 5–10 must be recovered and reconciled before any migration is applied. This observation does not mean the current repository schema has been deployed or verified live.
 
 ## What was actually verified this phase, and how
 

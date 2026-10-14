@@ -42,5 +42,5 @@
 
 - Preview: https://royal-chain-wallet-preview.onrender.com
 - Branch: `security/tx-hardening-2026-10-14`
-- Tests/build must be checked for the latest branch head. Prior green CI runs predate later changes and are not evidence that the current head passes.
+- The checked source snapshot `195ad7b8156cbc1ce37a9321134dce83eda519e9` passed [CI run 38614435197](https://github.com/RoyalFinTech/Royal_Chain_Wallet/actions/runs/38614435197), including typecheck, unit tests, lint and production build. Its dependency audit reported 0 vulnerabilities, and Render deploy `dep-db7sg7h5efls73csj47g` is live. Any subsequent code change requires a fresh run; this is not browser smoke testing or live transaction verification.
 - No live migration, live token mint, or real-money transfer was executed as part of this QA work.
