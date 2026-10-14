@@ -26,7 +26,8 @@ export function WalletStrip() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">Connect Royal Chain Wallet</p>
             <p className="text-[11px] text-muted-foreground">
-              Create or import a wallet for BTC, ETH, BNB and SOL. SPL token reads are not enabled yet.
+              Create or import a wallet for BTC, ETH, BNB and SOL. SPL token reads are not enabled
+              yet.
             </p>
           </div>
         </div>
@@ -103,7 +104,6 @@ export function WalletStrip() {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
-
           </p>
         )}
         <button
@@ -114,8 +114,8 @@ export function WalletStrip() {
           {shortenAddress(primaryAddress, 6, 6)}
         </button>
         <p className="mt-1 text-[10px] text-muted-foreground">
-          {liveNetworkCount}/4 native networks have RPC endpoints configured · market prices are estimates
-          until a live price feed is set
+          {liveNetworkCount}/4 native networks have RPC endpoints configured · market prices are
+          estimates until a live price feed is set
         </p>
       </div>
 
