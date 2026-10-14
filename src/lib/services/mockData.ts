@@ -5,7 +5,7 @@
  * history. The price values and 24-hour changes are illustrative only.
  * Live balance values come from the chain-specific RPC/indexer services.
  */
-import type { AssetMeta, AssetSymbol, TxRecord, ChainId, NetworkStatus } from "./types";
+import type { AssetMeta, AssetSymbol, ChainId, NetworkStatus } from "./types";
 
 export const ASSET_CATALOG: Record<AssetSymbol, AssetMeta> = {
   BTC: {
@@ -76,40 +76,13 @@ const BASE_USD_PRICE: Record<AssetSymbol, number> = {
   USDC: 1,
 };
 
-/** Small deterministic PRNG (mulberry32) seeded from a string. */
-function seedFromString(input: string): number {
-  let h = 1779033703 ^ input.length;
-  for (let i = 0; i < input.length; i++) {
-    h = Math.imul(h ^ input.charCodeAt(i), 3432918353);
-    h = (h << 13) | (h >>> 19);
-  }
-  return h >>> 0;
-}
-
-function mulberry32(seed: number) {
-  let a = seed;
-  return function rand() {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function rngFor(address: string, symbol: string) {
-  return mulberry32(seedFromString(`${address}:${symbol}`));
-}
-
-/** Return illustrative price metadata only; never manufacture a balance. */
-export function sampleMarketData(address: string, symbol: AssetSymbol) {
-  const rand = rngFor(address, symbol);
-  const price = BASE_USD_PRICE[symbol] * (0.94 + rand() * 0.12);
+/** Return an illustrative market quote only; it is not a live spot price. */
+export function sampleMarketData(symbol: AssetSymbol) {
   return {
     symbol,
-    usdPrice: Number(price.toFixed(price < 2 ? 4 : 2)),
-    // Historical market movement is not connected, so do not fabricate a
-    // percent change. The dashboard's chart preview is labelled separately.
+    usdPrice: BASE_USD_PRICE[symbol],
+    // Historical price movement is not connected, so never manufacture a
+    // 24-hour change. The dashboard's separate sample chart is labelled.
     change24hPct: 0,
   };
 }
