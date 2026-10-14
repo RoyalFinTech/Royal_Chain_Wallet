@@ -30,7 +30,9 @@ function NotificationsPage() {
       </div>
       <p className="mt-1 text-sm text-muted-foreground">Choose what you want to hear about.</p>
       <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs leading-5 text-muted-foreground">
-        These switches currently change local preview state only. Preferences are not saved between visits, and push notifications, email delivery, transaction alerts, and device feedback are not connected in this build.
+        These switches currently change local preview state only. Preferences are not saved between
+        visits, and push notifications, email delivery, transaction alerts, and device feedback are
+        not connected in this build.
       </div>
 
       <Group title="Channels">
