@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { WalletCard } from "@/components/wallet/WalletCard";
+import { useStoredWallet } from "@/hooks/use-wallet";
 import { formatMoney } from "@/lib/mock-data";
 import {
   ArrowDownToLine,
@@ -31,6 +32,11 @@ const pockets = [
 ];
 
 function WalletPage() {
+  const storedWallet = useStoredWallet();
+  const solanaAddress = storedWallet?.addresses.solana.address;
+  const walletLabel = solanaAddress
+    ? `RCW-${solanaAddress.slice(-8, -4).toUpperCase()}-${solanaAddress.slice(-4).toUpperCase()}`
+    : "No wallet created";
   const loadingBalance = useSimulatedLoading(700);
   const loadingSummary = useSimulatedLoading(900);
   const loadingPockets = useSimulatedLoading(1100);
@@ -45,13 +51,16 @@ function WalletPage() {
       <PageHeader title="My Wallet" subtitle="Manage your balances & pockets" />
 
       <div className="mt-5">{loadingBalance ? <WalletBalanceSkeleton /> : <WalletCard />}</div>
+      <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-muted-foreground">
+        Demo notice: summary, pocket and balance figures on this screen are sample data, not verified on-chain balances. Transaction sending is not enabled from this demo screen.
+      </div>
 
       <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-card p-3 text-xs">
         <span className="text-muted-foreground">Wallet ID</span>
         {loadingBalance ? (
           <SkeletonLine className="h-3 w-28" />
         ) : (
-          <span className="font-mono">RCW-8842-1930</span>
+          <span className="font-mono">{walletLabel}</span>
         )}
         <button className="press grid h-7 w-7 place-items-center rounded-full bg-muted">
           <Copy className="h-3 w-3" />
