@@ -3,8 +3,8 @@ import { Home, Wallet, Repeat, Receipt, User } from "lucide-react";
 
 const items = [
   { to: "/app", label: "Home", icon: Home },
-  { to: "/app/currencies", label: "Wallets", icon: Wallet },
-  { to: "/app/exchange", label: "Exchange", icon: Repeat },
+  { to: "/app/currencies", label: "Crypto", icon: Wallet },
+  { to: "/app/swap", label: "Swap", icon: Repeat },
   { to: "/app/transactions", label: "History", icon: Receipt },
   { to: "/app/profile", label: "Profile", icon: User },
 ] as const;
