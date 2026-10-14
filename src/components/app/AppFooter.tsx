@@ -1,9 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { Shield } from "lucide-react";
+import { Logo } from "@/components/brand/Logo";
 
 export function AppFooter() {
   return (
     <footer className="mt-10 border-t border-border/60 bg-gradient-to-b from-transparent to-muted/40 px-5 pb-28 pt-8 text-center text-xs text-muted-foreground">
+      <div className="mb-3 flex justify-center">
+        <Logo size={34} withText />
+      </div>
       <p className="font-display text-sm text-foreground">
         Powered by <span className="text-gold">Royal FinTech Company</span>
       </p>
