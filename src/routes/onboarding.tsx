@@ -19,7 +19,8 @@ const slides = [
     ],
     icon: Wallet,
     image: "/royal-chain-wallet-onboarding.jpg",
-    imageAlt: "Royal Chain Wallet premium smartphone crypto dashboard with multi-chain icons, portfolio chart and QR code",
+    imageAlt:
+      "Royal Chain Wallet premium smartphone crypto dashboard with multi-chain icons, portfolio chart and QR code",
     imageCredit: "Royal Chain Wallet artwork",
   },
   {
