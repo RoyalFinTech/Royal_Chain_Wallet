@@ -9,6 +9,12 @@ describe("wallet/derive", () => {
     expect(validateMnemonic(m)).toBe(true);
   });
 
+  it("generates a valid 24-word mnemonic from 256 bits of entropy", () => {
+    const m = generateMnemonic(256);
+    expect(m.split(" ")).toHaveLength(24);
+    expect(validateMnemonic(m)).toBe(true);
+  });
+
   it("generates fresh valid recovery phrases instead of reusing a static phrase", () => {
     const phrases = Array.from({ length: 6 }, () => generateMnemonic(128));
     expect(new Set(phrases).size).toBe(phrases.length);
