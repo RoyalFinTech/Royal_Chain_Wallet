@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Link2, X, Check, Loader2, ShieldAlert, Globe, Plug } from "lucide-react";
+import { ArrowLeft, Link2, X, Check, Loader2, ShieldAlert, Globe, Plug, Camera } from "lucide-react";
 import { useStoredWallet } from "@/hooks/use-wallet";
 import { unlockWallet } from "@/lib/wallet";
 import { isWalletConnectConfigured } from "@/lib/walletconnect/client";
@@ -18,6 +18,11 @@ import {
   type PendingProposal,
   type PendingRequest,
 } from "@/lib/walletconnect/session-manager";
+
+type BrowserQrDetector = {
+  detect(source: HTMLVideoElement): Promise<Array<{ rawValue?: string }>>;
+};
+type BrowserQrDetectorConstructor = new (options: { formats: string[] }) => BrowserQrDetector;
 
 export const Route = createFileRoute("/app/walletconnect")({
   component: WalletConnectPage,
@@ -37,6 +42,14 @@ function WalletConnectPage() {
   );
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const detectorRef = useRef<BrowserQrDetector | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanTimerRef = useRef<number | null>(null);
+  const requestSupported =
+    !!request && ["personal_sign", "solana_signMessage"].includes(request.method);
 
   useEffect(() => {
     if (!configured) return;
@@ -56,6 +69,83 @@ function WalletConnectPage() {
       unsubRequest?.();
     };
   }, [configured]);
+
+  async function startQrScan() {
+    const Detector = (window as Window & { BarcodeDetector?: BrowserQrDetectorConstructor })
+      .BarcodeDetector;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setScanNotice("Camera access is unavailable here. Paste the WalletConnect URI manually.");
+      return;
+    }
+    if (!Detector) {
+      setScanNotice("This browser does not support native QR decoding. Paste the WalletConnect URI manually.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      const video = videoRef.current;
+      if (!video) {
+        stream.getTracks().forEach((track) => track.stop());
+        throw new Error("Camera preview could not be initialized.");
+      }
+      streamRef.current = stream;
+      detectorRef.current = new Detector({ formats: ["qr_code"] });
+      video.srcObject = stream;
+      await video.play();
+      setScanNotice("Point the camera at the WalletConnect QR code. Scanning does not approve a connection.");
+      setScanning(true);
+    } catch (e) {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      detectorRef.current = null;
+      setScanning(false);
+      setScanNotice(e instanceof Error ? e.message : "Could not start camera scanning.");
+    }
+  }
+
+  useEffect(() => {
+    if (!scanning) return;
+    let cancelled = false;
+
+    const scanNextFrame = async () => {
+      if (cancelled) return;
+      const video = videoRef.current;
+      const detector = detectorRef.current;
+      if (video && detector && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        try {
+          const results = await detector.detect(video);
+          const rawValue = results.find((item) => item.rawValue)?.rawValue;
+          if (rawValue) {
+            if (/^wc:[^?\\s]+@2\\?/.test(rawValue)) {
+              setUri(rawValue);
+              setScanNotice("WalletConnect URI scanned. Review it, then tap Connect to send the pairing request.");
+              setScanning(false);
+              return;
+            }
+            setScanNotice("A QR code was detected, but it is not a WalletConnect v2 URI. Scan the dapp's Connect Wallet QR or paste the URI.");
+          }
+        } catch (e) {
+          console.warn("[walletconnect] QR detection failed:", e);
+        }
+      }
+      if (!cancelled) scanTimerRef.current = window.setTimeout(() => void scanNextFrame(), 350);
+    };
+
+    void scanNextFrame();
+    return () => {
+      cancelled = true;
+      if (scanTimerRef.current !== null) window.clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = null;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      detectorRef.current = null;
+      if (videoRef.current) videoRef.current.srcObject = null;
+    };
+  }, [scanning]);
 
   async function connect() {
     if (!uri.trim()) return;
@@ -96,6 +186,10 @@ function WalletConnectPage() {
 
   async function handleApproveRequest() {
     if (!request || !wallet) return;
+    if (!requestSupported) {
+      toast.error("This WalletConnect signing method is not supported safely yet. Reject the request.");
+      return;
+    }
     setBusy(true);
     try {
       const { mnemonic } = await unlockWallet(wallet, pin);
@@ -182,15 +276,35 @@ function WalletConnectPage() {
                   )}
                 </button>
               </div>
-              <p className="mt-2 text-[11px] text-muted-foreground">
-                Copy the "Connect Wallet" URI from a dapp, or scan its QR code with{" "}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => navigate({ to: "/qr" })}
-                  className="text-gold hover:underline"
+                  type="button"
+                  onClick={() => void startQrScan()}
+                  disabled={scanning || pairing}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 text-xs font-semibold disabled:opacity-50"
                 >
-                  the scanner
+                  <Camera className="h-4 w-4" /> {scanning ? "Scanning…" : "Scan QR with camera"}
                 </button>
-                .
+                {scanning && (
+                  <button
+                    type="button"
+                    onClick={() => setScanning(false)}
+                    className="h-10 rounded-xl border border-border px-3 text-xs font-semibold"
+                  >
+                    Stop camera
+                  </button>
+                )}
+              </div>
+              <div className={scanning ? "mt-3 block overflow-hidden rounded-xl border border-border bg-black" : "hidden"}>
+                <video ref={videoRef} autoPlay playsInline muted className="max-h-72 w-full object-contain" />
+              </div>
+              {scanNotice && (
+                <p role="status" className="mt-2 break-words text-[11px] text-muted-foreground">
+                  {scanNotice}
+                </p>
+              )}
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Paste the URI or scan a dapp's WalletConnect v2 QR. Scanning only reads the pairing URI; you must still review and approve the connection.
               </p>
             </div>
 
@@ -261,8 +375,7 @@ function WalletConnectPage() {
               </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              This app wants to see your public address and request transaction approvals. It cannot
-              move funds without your explicit approval and PIN each time.
+              This app can see the public account addresses you approve. This build supports message-signing requests only; transaction signing and sending remain disabled until they can be validated safely.
             </p>
             <div className="mt-5 flex gap-2">
               <button
@@ -305,9 +418,15 @@ function WalletConnectPage() {
               {request.dappName} is requesting{" "}
               <span className="font-mono text-xs">{request.method}</span>
             </p>
-            <label className="mt-4 block text-xs font-medium text-muted-foreground">
-              Enter your PIN to approve
-            </label>
+            {!requestSupported ? (
+              <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+                This method is not supported safely in this build. Do not approve it; reject the request. No transaction will be sent by this wallet.
+              </div>
+            ) : (
+              <label className="mt-4 block text-xs font-medium text-muted-foreground">
+                Enter your PIN to approve this message signature
+              </label>
+            )}
             <input
               type="password"
               inputMode="numeric"
@@ -326,7 +445,7 @@ function WalletConnectPage() {
               </button>
               <button
                 onClick={() => void handleApproveRequest()}
-                disabled={pin.length !== 6 || busy}
+                disabled={pin.length !== 6 || busy || !requestSupported}
                 className="grid h-12 flex-1 place-items-center rounded-2xl gradient-gold text-sm font-semibold text-navy shadow-glow disabled:opacity-50"
               >
                 {busy ? (
