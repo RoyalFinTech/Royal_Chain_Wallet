@@ -75,7 +75,8 @@ export const createWalletRecord = createServerFn({ method: "POST" })
         derivation_path: a.derivationPath,
       })),
     );
-    if (accountsErr) throw new Error("Wallet was created, but account setup failed. Contact support.");
+    if (accountsErr)
+      throw new Error("Wallet was created, but account setup failed. Contact support.");
 
     return wallet;
   });

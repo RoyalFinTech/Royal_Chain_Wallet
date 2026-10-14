@@ -184,16 +184,14 @@ export async function listActiveSessions(): Promise<
  * either preserved or broken; it must never sign with anything other
  * than a key derived transiently from the user's own decrypted mnemonic.
  */
-export async function approveRequest(
-  request: PendingRequest,
-  mnemonic: string,
-): Promise<void> {
+export async function approveRequest(request: PendingRequest, mnemonic: string): Promise<void> {
   const kit = await getWalletKit();
   let result: unknown;
 
   if (request.method === "personal_sign" || request.method === "solana_signMessage") {
     const addresses = await deriveAllChains(mnemonic);
-    const isSolana = request.method === "solana_signMessage" && request.chainId.startsWith("solana");
+    const isSolana =
+      request.method === "solana_signMessage" && request.chainId.startsWith("solana");
 
     if (isSolana) {
       const params = request.params as { pubkey?: unknown } | null;
@@ -203,7 +201,10 @@ export async function approveRequest(
         typeof params.pubkey !== "string" ||
         params.pubkey !== addresses.solana.address
       ) {
-        throw new AppError("validation_error", "Requested Solana signing address does not match this wallet.");
+        throw new AppError(
+          "validation_error",
+          "Requested Solana signing address does not match this wallet.",
+        );
       }
     } else {
       if (
@@ -211,7 +212,10 @@ export async function approveRequest(
         typeof request.params[1] !== "string" ||
         request.params[1].toLowerCase() !== addresses.ethereum.address.toLowerCase()
       ) {
-        throw new AppError("validation_error", "Requested EVM signing address does not match this wallet.");
+        throw new AppError(
+          "validation_error",
+          "Requested EVM signing address does not match this wallet.",
+        );
       }
     }
 

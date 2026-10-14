@@ -82,7 +82,9 @@ function ImportWallet() {
 
   const startImport = (m: Method) => {
     if (m !== "phrase") {
-      setError("This import method is not available yet. Restore using a valid BIP-39 recovery phrase.");
+      setError(
+        "This import method is not available yet. Restore using a valid BIP-39 recovery phrase.",
+      );
       return;
     }
     setMethod(m);
@@ -742,7 +744,8 @@ function PinSetupPanel({
       </div>
       <h2 className="mt-3 font-display text-xl font-bold">Secure this restored wallet</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Your phrase has been validated. Choose a new 6-digit PIN before the wallet is saved on this device.
+        Your phrase has been validated. Choose a new 6-digit PIN before the wallet is saved on this
+        device.
       </p>
       <p className="mt-3 break-all rounded-xl bg-muted/40 p-3 font-mono text-xs text-muted-foreground">
         Solana address: {address}
@@ -774,9 +777,15 @@ function PinSetupPanel({
         />
       </label>
       {confirmPin.length === 6 && !pinOk && (
-        <p className="mt-2 text-xs text-destructive">PINs must match and contain exactly six digits.</p>
+        <p className="mt-2 text-xs text-destructive">
+          PINs must match and contain exactly six digits.
+        </p>
       )}
-      {error && <div className="mt-3"><SecurityWarning title={error} /></div>}
+      {error && (
+        <div className="mt-3">
+          <SecurityWarning title={error} />
+        </div>
+      )}
       <button
         type="button"
         onClick={onContinue}
@@ -788,4 +797,3 @@ function PinSetupPanel({
     </div>
   );
 }
-

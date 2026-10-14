@@ -33,7 +33,8 @@ export function WalletCard({
     (derivedAddress
       ? `RCW-${derivedAddress.slice(-8, -4).toUpperCase()}-${derivedAddress.slice(-4).toUpperCase()}`
       : "No wallet yet");
-  const displayedAddress = address ?? derivedAddress ?? "Create or import a wallet to see your address";
+  const displayedAddress =
+    address ?? derivedAddress ?? "Create or import a wallet to see your address";
   const hasWallet = Boolean(activeWallet || (walletId && address));
   const value = balance ?? CURRENCY_BALANCES[currency];
   const meta = CURRENCIES[currency];
@@ -57,7 +58,9 @@ export function WalletCard({
 
       <div className="relative mt-7">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-white/60">Portfolio value · demo</p>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-white/60">
+            Portfolio value · demo
+          </p>
           <div className="relative">
             <button
               onClick={() => setOpen((o) => !o)}
@@ -101,7 +104,9 @@ export function WalletCard({
       </div>
 
       <div className="relative mt-6 flex items-center justify-between text-xs text-white/60">
-        <span className="font-mono">{hasWallet ? `•••• ${displayedWalletId.slice(-4)}` : "Create a wallet to begin"}</span>
+        <span className="font-mono">
+          {hasWallet ? `•••• ${displayedWalletId.slice(-4)}` : "Create a wallet to begin"}
+        </span>
         <span className="font-display tracking-[0.35em]">ROYAL</span>
       </div>
     </div>

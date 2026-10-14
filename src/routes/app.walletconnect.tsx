@@ -2,7 +2,17 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import bs58 from "bs58";
 import { toast } from "sonner";
-import { ArrowLeft, Link2, X, Check, Loader2, ShieldAlert, Globe, Plug, Camera } from "lucide-react";
+import {
+  ArrowLeft,
+  Link2,
+  X,
+  Check,
+  Loader2,
+  ShieldAlert,
+  Globe,
+  Plug,
+  Camera,
+} from "lucide-react";
 import { useStoredWallet } from "@/hooks/use-wallet";
 import { unlockWallet } from "@/lib/wallet";
 import { isWalletConnectConfigured } from "@/lib/walletconnect/client";
@@ -57,10 +67,10 @@ function WalletConnectPage() {
     : wallet?.addresses.ethereum.address;
   const requestAddressMatchesWallet = Boolean(
     requestMessage?.address &&
-      expectedRequestAddress &&
-      (request?.chainId.startsWith("solana")
-        ? requestMessage.address === expectedRequestAddress
-        : requestMessage.address.toLowerCase() === expectedRequestAddress.toLowerCase()),
+    expectedRequestAddress &&
+    (request?.chainId.startsWith("solana")
+      ? requestMessage.address === expectedRequestAddress
+      : requestMessage.address.toLowerCase() === expectedRequestAddress.toLowerCase()),
   );
   const requestCanApprove = Boolean(
     requestSupported && requestMessage?.canApprove && requestAddressMatchesWallet,
@@ -93,7 +103,9 @@ function WalletConnectPage() {
       return;
     }
     if (!Detector) {
-      setScanNotice("This browser does not support native QR decoding. Paste the WalletConnect URI manually.");
+      setScanNotice(
+        "This browser does not support native QR decoding. Paste the WalletConnect URI manually.",
+      );
       return;
     }
 
@@ -111,7 +123,9 @@ function WalletConnectPage() {
       detectorRef.current = new Detector({ formats: ["qr_code"] });
       video.srcObject = stream;
       await video.play();
-      setScanNotice("Point the camera at the WalletConnect QR code. Scanning does not approve a connection.");
+      setScanNotice(
+        "Point the camera at the WalletConnect QR code. Scanning does not approve a connection.",
+      );
       setScanning(true);
     } catch (e) {
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -137,11 +151,15 @@ function WalletConnectPage() {
           if (rawValue) {
             if (/^wc:[^?\s]+@2\?/.test(rawValue)) {
               setUri(rawValue);
-              setScanNotice("WalletConnect URI scanned. Review it, then tap Connect to send the pairing request.");
+              setScanNotice(
+                "WalletConnect URI scanned. Review it, then tap Connect to send the pairing request.",
+              );
               setScanning(false);
               return;
             }
-            setScanNotice("A QR code was detected, but it is not a WalletConnect v2 URI. Scan the dapp's Connect Wallet QR or paste the URI.");
+            setScanNotice(
+              "A QR code was detected, but it is not a WalletConnect v2 URI. Scan the dapp's Connect Wallet QR or paste the URI.",
+            );
           }
         } catch (e) {
           console.warn("[walletconnect] QR detection failed:", e);
@@ -307,8 +325,20 @@ function WalletConnectPage() {
                   </button>
                 )}
               </div>
-              <div className={scanning ? "mt-3 block overflow-hidden rounded-xl border border-border bg-black" : "hidden"}>
-                <video ref={videoRef} autoPlay playsInline muted className="max-h-72 w-full object-contain" />
+              <div
+                className={
+                  scanning
+                    ? "mt-3 block overflow-hidden rounded-xl border border-border bg-black"
+                    : "hidden"
+                }
+              >
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="max-h-72 w-full object-contain"
+                />
               </div>
               {scanNotice && (
                 <p role="status" className="mt-2 break-words text-[11px] text-muted-foreground">
@@ -316,7 +346,8 @@ function WalletConnectPage() {
                 </p>
               )}
               <p className="mt-2 text-[11px] text-muted-foreground">
-                Paste the URI or scan a dapp's WalletConnect v2 QR. Scanning only reads the pairing URI; you must still review and approve the connection.
+                Paste the URI or scan a dapp's WalletConnect v2 QR. Scanning only reads the pairing
+                URI; you must still review and approve the connection.
               </p>
             </div>
 
@@ -387,7 +418,9 @@ function WalletConnectPage() {
               </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              This app can see the public account addresses you approve. This build supports message-signing requests only; transaction signing and sending remain disabled until they can be validated safely.
+              This app can see the public account addresses you approve. This build supports
+              message-signing requests only; transaction signing and sending remain disabled until
+              they can be validated safely.
             </p>
             <div className="mt-5 flex gap-2">
               <button
@@ -432,17 +465,28 @@ function WalletConnectPage() {
             </p>
             {!requestSupported ? (
               <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
-                This method is not supported safely in this build. Do not approve it; reject the request. No transaction will be sent by this wallet.
+                This method is not supported safely in this build. Do not approve it; reject the
+                request. No transaction will be sent by this wallet.
               </div>
             ) : (
               <>
                 <div className="mt-3 rounded-2xl border border-border bg-muted/30 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Network</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Network
+                  </p>
                   <p className="mt-1 break-all font-mono text-xs">{request.chainId}</p>
-                  <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Address requested</p>
-                  <p className="mt-1 break-all font-mono text-xs">{requestMessage?.address ?? "Not supplied by the dApp"}</p>
-                  <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Exact message to sign</p>
-                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-background p-3 font-mono text-xs">{requestMessage?.message ?? "Unable to decode this message safely."}</pre>
+                  <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Address requested
+                  </p>
+                  <p className="mt-1 break-all font-mono text-xs">
+                    {requestMessage?.address ?? "Not supplied by the dApp"}
+                  </p>
+                  <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Exact message to sign
+                  </p>
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-background p-3 font-mono text-xs">
+                    {requestMessage?.message ?? "Unable to decode this message safely."}
+                  </pre>
                   {(!requestAddressMatchesWallet || requestMessage?.warning) && (
                     <p className="mt-2 text-[11px] text-amber-700">
                       {!requestAddressMatchesWallet
@@ -451,8 +495,12 @@ function WalletConnectPage() {
                     </p>
                   )}
                   <details className="mt-3">
-                    <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">View raw request parameters</summary>
-                    <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-background p-2 font-mono text-[10px]">{JSON.stringify(request.params, null, 2)}</pre>
+                    <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">
+                      View raw request parameters
+                    </summary>
+                    <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-background p-2 font-mono text-[10px]">
+                      {JSON.stringify(request.params, null, 2)}
+                    </pre>
                   </details>
                 </div>
                 <label className="mt-4 block text-xs font-medium text-muted-foreground">
@@ -497,12 +545,21 @@ function WalletConnectPage() {
     </div>
   );
 }
-type MessagePreview = { message: string; address: string | null; warning?: string; canApprove: boolean };
+type MessagePreview = {
+  message: string;
+  address: string | null;
+  warning?: string;
+  canApprove: boolean;
+};
 
 function getMessagePreview(request: PendingRequest): MessagePreview {
-  const decodeText = (bytes: Uint8Array): { message: string; warning?: string; canApprove: boolean } => {
+  const decodeText = (
+    bytes: Uint8Array,
+  ): { message: string; warning?: string; canApprove: boolean } => {
     const message = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-    const replacementCount = Array.from(message).filter((char) => char.charCodeAt(0) === 0xfffd).length;
+    const replacementCount = Array.from(message).filter(
+      (char) => char.charCodeAt(0) === 0xfffd,
+    ).length;
     const controlCount = Array.from(message).filter(
       (char) => char.charCodeAt(0) < 32 && char !== "\n" && char !== "\r" && char !== "\t",
     ).length;
@@ -510,7 +567,8 @@ function getMessagePreview(request: PendingRequest): MessagePreview {
     if (replacementCount > 0 || controlCount > 0) {
       return {
         message: "Binary or non-text message (" + bytes.length + " bytes).",
-        warning: "This payload cannot be reviewed as readable text in this build. Reject the request.",
+        warning:
+          "This payload cannot be reviewed as readable text in this build. Reject the request.",
         canApprove: false,
       };
     }
@@ -529,17 +587,29 @@ function getMessagePreview(request: PendingRequest): MessagePreview {
 
   if (request.method === "personal_sign" && Array.isArray(request.params)) {
     const payload = request.params[0];
-    const address = typeof request.params[1] === "string" ? request.params[1] as string : null;
+    const address = typeof request.params[1] === "string" ? (request.params[1] as string) : null;
     if (typeof payload !== "string") {
-      return { message: "Unsupported message parameters.", address, warning: "This request will not be signed.", canApprove: false };
+      return {
+        message: "Unsupported message parameters.",
+        address,
+        warning: "This request will not be signed.",
+        canApprove: false,
+      };
     }
 
     if (payload.startsWith("0x")) {
       const hex = payload.slice(2);
       if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(hex)) {
-        return { message: "The message is not valid hex data.", address, warning: "Reject this request.", canApprove: false };
+        return {
+          message: "The message is not valid hex data.",
+          address,
+          warning: "Reject this request.",
+          canApprove: false,
+        };
       }
-      const bytes = Uint8Array.from(hex.match(/.{2}/g)?.map((byte) => Number.parseInt(byte, 16)) ?? []);
+      const bytes = Uint8Array.from(
+        hex.match(/.{2}/g)?.map((byte) => Number.parseInt(byte, 16)) ?? [],
+      );
       return { ...decodeText(bytes), address };
     }
 
@@ -548,21 +618,37 @@ function getMessagePreview(request: PendingRequest): MessagePreview {
 
   if (
     request.method === "solana_signMessage" &&
-    typeof request.params === "object" && request.params !== null && "message" in request.params
+    typeof request.params === "object" &&
+    request.params !== null &&
+    "message" in request.params
   ) {
     const params = request.params as { message?: unknown; pubkey?: unknown };
     const address = typeof params.pubkey === "string" ? params.pubkey : null;
     if (typeof params.message !== "string" || params.message.length === 0) {
-      return { message: "Unsupported message parameters.", address, warning: "This request will not be signed.", canApprove: false };
+      return {
+        message: "Unsupported message parameters.",
+        address,
+        warning: "This request will not be signed.",
+        canApprove: false,
+      };
     }
 
     try {
       return { ...decodeText(bs58.decode(params.message)), address };
     } catch {
-      return { message: "Could not decode the Solana message.", address, warning: "Reject this request because the payload could not be decoded.", canApprove: false };
+      return {
+        message: "Could not decode the Solana message.",
+        address,
+        warning: "Reject this request because the payload could not be decoded.",
+        canApprove: false,
+      };
     }
   }
 
-  return { message: "Unsupported method.", address: null, warning: "This request will not be signed.", canApprove: false };
+  return {
+    message: "Unsupported method.",
+    address: null,
+    warning: "This request will not be signed.",
+    canApprove: false,
+  };
 }
-

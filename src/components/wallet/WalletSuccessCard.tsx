@@ -43,13 +43,17 @@ export function WalletSuccessCard({ walletId, addresses }: Props) {
           {rows.map((row) => (
             <div key={row.label} className="rounded-xl border border-border bg-muted/30 px-3 py-2">
               <p className="text-xs font-semibold">{row.label}</p>
-              <p className="mt-1 break-all font-mono text-[11px] text-muted-foreground">{row.address}</p>
+              <p className="mt-1 break-all font-mono text-[11px] text-muted-foreground">
+                {row.address}
+              </p>
             </div>
           ))}
         </div>
 
         <div className="mt-4 rounded-xl border border-border p-3 text-xs text-muted-foreground">
-          Recovery phrases contain key material, not account balances or transaction history. Balances and activity must be fetched from the relevant networks; no transfer was made by restoring this wallet.
+          Recovery phrases contain key material, not account balances or transaction history.
+          Balances and activity must be fetched from the relevant networks; no transfer was made by
+          restoring this wallet.
         </div>
 
         <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2 py-1 text-[11px] font-medium text-success ring-1 ring-success/30">

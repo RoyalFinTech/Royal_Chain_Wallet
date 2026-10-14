@@ -52,7 +52,8 @@ function WalletPage() {
 
       <div className="mt-5">{loadingBalance ? <WalletBalanceSkeleton /> : <WalletCard />}</div>
       <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-muted-foreground">
-        Demo notice: summary, pocket and balance figures on this screen are sample data, not verified on-chain balances. Transaction sending is not enabled from this demo screen.
+        Demo notice: summary, pocket and balance figures on this screen are sample data, not
+        verified on-chain balances. Transaction sending is not enabled from this demo screen.
       </div>
 
       <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-card p-3 text-xs">
