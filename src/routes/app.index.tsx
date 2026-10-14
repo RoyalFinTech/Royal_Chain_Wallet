@@ -141,7 +141,9 @@ function Dashboard() {
       <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
         <p className="text-[11px] leading-5 text-muted-foreground">
-          Preview data: fiat conversions, market trends, and some portfolio UI values are illustrative until a live price provider is configured. Network balances are shown as zero when their RPC is not configured. Transfers do not simulate success.
+          Preview data: fiat conversions, market trends, and some portfolio UI values are
+          illustrative until a live price provider is configured. Network balances are shown as zero
+          when their RPC is not configured. Transfers do not simulate success.
         </p>
       </div>
 
@@ -249,7 +251,8 @@ function Dashboard() {
             <div className="rounded-2xl border border-dashed border-border bg-card p-4">
               <p className="text-sm font-semibold">No transaction activity to show</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                This build does not yet index incoming on-chain activity. Transactions are only listed here when the app has a real hash from a live chain operation.
+                This build does not yet index incoming on-chain activity. Transactions are only
+                listed here when the app has a real hash from a live chain operation.
               </p>
             </div>
           )}
