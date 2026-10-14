@@ -1,15 +1,13 @@
 # Supabase Migration Drift Report
 
-Date checked: 2026-10-14
-Project: **Royal Chain Wallet** (`jnehlnifltckcfecjhhf`)
-Organization: **Royal FinTech Company**
-Region: `eu-west-3`
+Checked: 2026-10-14.
+Project: Royal Chain Wallet (`jnehlnifltckcfecjhhf`).
+Organization: Royal FinTech Company.
+Region: `eu-west-3` (Paris).
 
-## Live migration history
+## Registered live migrations
 
-The connected Supabase project reports the following migration history:
-
-| Version | Migration name |
+| Source version | Migration |
 | --- | --- |
 | 20260728115057 | `00000000000001_royal_chain_core_schema` |
 | 20260728115115 | `00000000000002_rate_limiting` |
@@ -22,30 +20,26 @@ The connected Supabase project reports the following migration history:
 | 20260730013509 | `00000000000009_lock_down_internal_ledger_functions` |
 | 20260731003918 | `00000000000010_transactions_tx_hash_unique` |
 
-## Repository state observed
+## Repository source state
+- SQL sources #1–#4 are present in the main migration folder.
+- Source SQL #5–#10 was not found in the repository tree or organization-scoped GitHub code search during this check.
+- Proposed `supabase/migrations/00000000000011_transaction_security_hardening.sql` exists on the QA branch and is not applied to the live project.
+- A clean database cannot currently be reproduced from the checked-in migration history alone.
 
-On repository `main`, source SQL files exist only for migrations #1–#4:
-- `00000000000001_royal_chain_core_schema.sql`
-- `00000000000002_rate_limiting.sql`
-- `00000000000003_ledger_and_currencies.sql`
-- `00000000000004_atomic_transaction_recording.sql`
+## Read-only findings
+- Project state was reported as active/healthy; a new Supabase project is not needed.
+- Read-only counts were zero in `public.users`, `public.wallets`, and `public.transactions` at inspection time.
+- Live `check_rate_limit(text,integer,integer)` is SECURITY DEFINER and executable by `anon` and `authenticated`, and caller-controlled bucket/quota/window values need restriction.
+- Live `record_transaction_with_ledger(...)` denies execute to `authenticated` and `anon`, while current app code calls it through an authenticated client.
+- Advisors reported six authenticated-callable SECURITY DEFINER helper functions, 13 unindexed foreign keys and four RLS auth-init-plan warnings.
+- No live DDL or data mutation was performed.
 
-The active security branch initially introduced `00000000000005_transaction_security_hardening.sql`; this is not a safe final migration number because the live database already has a different migration #5. It must be renamed/reconciled to a fresh migration sequence after #10 before review.
+## Reconciliation procedure
+1. Recover exact migration SQL #5–#10 from Git history, backups, Supabase source control or the original development environment.
+2. Compare each recovered migration to live `pg_policies`, function definitions and ACLs, triggers, constraints, indexes and grants.
+3. Restore the original historical filenames and versions; keep new work on migration #11 or later.
+4. Apply the complete history to a disposable database and compare its schema to the live inventory.
+5. Test candidate #11, RLS boundaries, transaction rollback, ledger invariants and concurrent rate limits in that disposable database.
+6. Obtain review and explicit approval before any production migration.
 
-## Risk and safe handling
-
-- A fresh environment cannot currently reproduce the full live schema from the repository migration directory.
-- Do not reset production, replay migration #1–#4, or apply a new DDL migration until missing sources #5–#10 have been recovered and drift has been reviewed.
-- The connected project is active and has a complete migration history registered; the issue is missing source files in the repository, not an absence of migrations in Supabase.
-- Read-only inspection found the live function ACL for `record_transaction_with_ledger(...)` denies execute to `authenticated` and `anon`, although application server code calls it with an authenticated client. A safe invocation design must be agreed and tested; do not grant broad execution merely to silence the error.
-- Read-only inspection found the current live `check_rate_limit(...)` is a SECURITY DEFINER RPC executable by `anon` and `authenticated`, with no bound to the caller identity and caller-chosen quota/window values. Correct this via a separate, tested migration after review.
-- Live rows count is zero for `public.users`, `public.wallets`, and `public.transactions` at the time of the read-only check.
-
-## Next reconciliation steps
-
-1. Recover the exact historical SQL for applied migrations #5–#10 from Git history, Supabase project source control or backups.
-2. Compare `pg_policies`, function definitions/ACLs, trigger definitions, constraints, indexes, and grants against all migration files.
-3. Add missing migrations to the repo without altering their original content/history.
-4. Renumber only the new, not-yet-applied security migration to #11 (or a suitable unique timestamped migration identifier), preserving one source file per registered migration.
-5. Reset a disposable Supabase database from repo sources and compare its schema/policy/function outputs with the connected project's read-only inventory.
-6. Run security advisors before/after the candidate migration and document the outcome.
+Never reset production, replay migrations #1–#4 against the live project, or apply migration #11 while source drift remains unresolved.
