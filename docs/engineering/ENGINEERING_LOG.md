@@ -50,3 +50,18 @@
 5. Confirm Render deployment succeeds, then test root page, server functions, auth, scanner/manual URI fallback, and logs.
 6. Audit all remaining demo identity/data consumers. Wallet/account creation still makes separate database requests and may leave an orphan wallet if account creation fails.
 7. Do not describe this as production-ready until all applicable integration and security gates pass.
+
+## 2026-10-14 — Follow-up from user-observed production-preview failure
+
+### Reproduction evidence
+- User supplied a screenshot from `/create-wallet`: phrase/address generation fails, the UI remains on a “Generating…” status with a generic error and disabled Continue button.
+- Trace of `src/routes/create-wallet.tsx` shows generation calls `generateMnemonic(128)` then `deriveAllChains()`; its catch hides the underlying cause from the user.
+- `src/lib/wallet/derive.ts` uses the global Node-style `Buffer` in Bitcoin and Solana key derivation. `src/routes/__root.tsx` installs `Buffer` only from a root React `useEffect`, which can run after child-route passive effects; generation therefore has an ordering dependency. Planned fix: directly import `Buffer` from the browser-compatible `buffer` package in modules that use it and add a retry/error UI.
+- Logo root cause confirmed in `src/assets/royal-chain-logo.png.asset.json`: image URL points to `/__l5e/assets-v1/...`, an internal asset route not served by the Render deployment. Planned fix: add a repository-owned SVG at `public/royal-chain-wallet-logo.svg` and have the shared `Logo` component use it.
+- Onboarding currently claims biometric protection, 24/7 fraud monitoring, instant QR payments, and multi-currency holdings including fiat. Those capabilities are not backed by reviewed live integrations and do not accurately describe the current multi-chain crypto wallet. Planned fix: rewrite the slides to accurately describe self-custody, recovery phrase/PIN, and supported networks.
+- Transfer route check found `transactionService.submitTransfer` fabricates a random hash and a “confirmed” record when the chain is not configured or when no native-chain mnemonic is supplied. This is a critical correctness/safety defect. Planned fix: fail closed with a clear configuration/unsupported-asset error instead of simulating payment success.
+- Royal token readiness check: `src/lib/services/tokenService.ts` explicitly returns deterministic mock balances; Admin Token UI contains static supply/holder/volume numbers and Mint/Burn buttons without handlers; the contract/mint registry points at environment variables and no live mint address/program is configured in the preview service. Royal Token is therefore **not ready to mint or transfer**.
+- Swap flow check found `getSwapQuote` uses hard-coded price constants and “Confirm Swap” waits and returns success without on-chain routing. Planned fix: mark the quote as a demo estimate and prevent a fake swap from showing as complete until a real route/transaction integration exists.
+- WalletConnect transaction signing stays disabled; no real dApp relay test has been run.
+- Latest CI run for pre-follow-up commit `2b7305a566518a3d1a3d91942881670a33020346` passed typecheck, tests, lint and build: https://github.com/RoyalFinTech/Royal_Chain_Wallet/actions/runs/38596973005. This result predates the fixes planned below.
+- Render preview service is live at https://royal-chain-wallet-preview.onrender.com. Previous deployment build and server startup succeeded. The next source commits will trigger deployments automatically.
