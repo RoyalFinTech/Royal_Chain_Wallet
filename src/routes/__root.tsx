@@ -91,7 +91,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Royal Chain Wallet" },
       {
         property: "og:description",
-        content: "A self-custody multi-chain cryptocurrency wallet for Bitcoin, Ethereum, BNB Chain and Solana.",
+        content:
+          "A self-custody multi-chain cryptocurrency wallet for Bitcoin, Ethereum, BNB Chain and Solana.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
