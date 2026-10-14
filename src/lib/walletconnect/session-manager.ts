@@ -12,7 +12,7 @@
  */
 import { getWalletKit } from "./client";
 import { EVM_CAIP2, BASE_CAIP2, SOLANA_CAIP2 } from "./chains";
-import type { DerivedAddresses } from "@/lib/wallet/derive";
+import { deriveAllChains, type DerivedAddresses } from "@/lib/wallet/derive";
 import { signMessage } from "@/lib/wallet/signing";
 import { logSecurityEvent } from "@/lib/security/audit";
 import { AppError } from "@/lib/errors/types";
@@ -192,7 +192,30 @@ export async function approveRequest(
   let result: unknown;
 
   if (request.method === "personal_sign" || request.method === "solana_signMessage") {
-    const chain = request.chainId.startsWith("solana") ? "solana" : "ethereum";
+    const addresses = await deriveAllChains(mnemonic);
+    const isSolana = request.method === "solana_signMessage" && request.chainId.startsWith("solana");
+
+    if (isSolana) {
+      const params = request.params as { pubkey?: unknown } | null;
+      if (
+        !params ||
+        typeof params !== "object" ||
+        typeof params.pubkey !== "string" ||
+        params.pubkey !== addresses.solana.address
+      ) {
+        throw new AppError("validation_error", "Requested Solana signing address does not match this wallet.");
+      }
+    } else {
+      if (
+        !Array.isArray(request.params) ||
+        typeof request.params[1] !== "string" ||
+        request.params[1].toLowerCase() !== addresses.ethereum.address.toLowerCase()
+      ) {
+        throw new AppError("validation_error", "Requested EVM signing address does not match this wallet.");
+      }
+    }
+
+    const chain = isSolana ? "solana" : "ethereum";
     const message = await extractMessageFromParams(request.params, chain);
     result = await signMessage(mnemonic, chain, message);
   } else {
