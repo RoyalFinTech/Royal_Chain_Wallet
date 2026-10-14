@@ -377,20 +377,38 @@ function CreateWallet() {
               </div>
               <h1 className="mt-4 font-display text-2xl font-bold">Your Royal Wallet is secured</h1>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Your recovery phrase has been encrypted locally with your PIN. This wallet derives public addresses for Bitcoin, Ethereum, BNB Chain, and Solana. No profile, bank account, or fiat balance is required to use the crypto wallet.
+                Your recovery phrase has been encrypted locally with your PIN. This wallet derives
+                public addresses for Bitcoin, Ethereum, BNB Chain, and Solana. No profile, bank
+                account, or fiat balance is required to use the crypto wallet.
               </p>
 
               {preview && (
                 <div className="mt-5 space-y-2 text-left text-xs">
-                  <IdRow label="Bitcoin" value={shortenAddress(preview.addresses.bitcoin.address, 7, 7)} mono />
-                  <IdRow label="Ethereum / BNB" value={shortenAddress(preview.addresses.ethereum.address, 7, 7)} mono />
-                  <IdRow label="Solana" value={shortenAddress(preview.addresses.solana.address, 7, 7)} mono />
+                  <IdRow
+                    label="Bitcoin"
+                    value={shortenAddress(preview.addresses.bitcoin.address, 7, 7)}
+                    mono
+                  />
+                  <IdRow
+                    label="Ethereum / BNB"
+                    value={shortenAddress(preview.addresses.ethereum.address, 7, 7)}
+                    mono
+                  />
+                  <IdRow
+                    label="Solana"
+                    value={shortenAddress(preview.addresses.solana.address, 7, 7)}
+                    mono
+                  />
                 </div>
               )}
 
               <div className="mt-5 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3 text-left text-xs leading-5 text-muted-foreground">
                 <p className="font-semibold text-foreground">Before you continue</p>
-                <p className="mt-1">Keep your recovery phrase offline. Network balances and transfers will be available only when the corresponding chain integration is configured and verified.</p>
+                <p className="mt-1">
+                  Keep your recovery phrase offline. Network balances and transfers will be
+                  available only when the corresponding chain integration is configured and
+                  verified.
+                </p>
               </div>
 
               <button
