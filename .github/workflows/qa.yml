@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -30,29 +32,41 @@ jobs:
           node-version: 22
           cache: npm
 
-      # The current committed lockfile is missing lru-cache@11.5.3. On our
-      # own security branch only, refresh the lockfile without lifecycle scripts
-      # and commit that deterministic metadata before doing a clean npm ci.
+      # Current lock is missing lru-cache@11.5.3. Refresh metadata without
+      # dependency lifecycle scripts before the clean install.
       - name: Refresh stale npm lockfile on security branch
-        id: locksync
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/security/')
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The changed TypeScript files were created through repository API
+      # edits, so apply the project's actual Prettier rules before verification.
+      # Commit only to this security branch, then dispatch a clean check run
+      # against the exact new head (GITHUB_TOKEN pushes don't trigger push runs).
+      - name: Format and commit branch-only source changes
+        id: format
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/security/')
         run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          if ! git diff --quiet -- package-lock.json; then
+          git fetch origin main
+          CHANGED_TS="$(git diff --name-only origin/main...HEAD -- '*.ts' '*.tsx')"
+          if [ -n "$CHANGED_TS" ]; then
+            printf '%s\n' "$CHANGED_TS" | xargs -r npx prettier --write
+          fi
+          if ! git diff --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "chore: synchronize npm lockfile for CI"
+            git add package-lock.json $CHANGED_TS
+            git commit -m "style: format and sync engineering QA changes"
             git push origin "HEAD:${GITHUB_REF_NAME}"
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "updated=true" >> "$GITHUB_OUTPUT"
           else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "updated=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # GITHUB_TOKEN pushes do not start new push workflows. Dispatch a second
-      # run so status checks include the new lockfile commit as the branch head.
-      - name: Run QA on refreshed lockfile commit
-        if: steps.locksync.outputs.changed == 'true'
+      - name: Re-run QA on the formatted branch head
+        if: steps.format.outputs.updated == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -62,9 +76,6 @@ jobs:
               workflow_id: "qa.yml",
               ref: process.env.GITHUB_REF_NAME
             });
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: TypeScript typecheck
         id: typecheck
