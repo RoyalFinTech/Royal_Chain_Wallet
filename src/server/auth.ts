@@ -1,12 +1,9 @@
 /**
  * Server function auth middleware, typed against our schema.
  *
- * Mirrors src/integrations/supabase/auth-middleware.ts (same JWT
- * verification via supabase.auth.getClaims — never hand-rolled JWT
- * decoding) but returns a client typed against database.types.ts so
- * server functions querying our custom tables (wallets, transactions,
- * etc.) get full type safety. The platform-generated middleware is left
- * untouched since it's regenerated automatically and used elsewhere.
+ * Verifies the Supabase JWT and resolves the related public.users row.
+ * authUserId is the Supabase Auth subject; profileId is the application
+ * primary key referenced by wallets, sessions, devices and notifications.
  */
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
@@ -41,5 +38,20 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
     throw new Error("Unauthorized: invalid session.");
   }
 
-  return next({ context: { db, userId: data.claims.sub as string } });
+  const authUserId = data.claims.sub as string;
+  const { data: profile, error: profileError } = await db
+    .from("users")
+    .select("id")
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error("[auth] User profile lookup failed:", profileError.message);
+    throw new Error("Unable to resolve the authenticated account profile.");
+  }
+  if (!profile) {
+    throw new Error("Account profile is not set up. Complete account setup before continuing.");
+  }
+
+  return next({ context: { db, userId: authUserId, profileId: profile.id } });
 });
