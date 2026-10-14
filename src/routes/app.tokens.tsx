@@ -53,7 +53,9 @@ function TokensPage() {
         </button>
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl font-bold">Tokens</h1>
-          <p className="text-xs text-muted-foreground">SPL tokens on Solana · integration not enabled</p>
+          <p className="text-xs text-muted-foreground">
+            SPL tokens on Solana · integration not enabled
+          </p>
         </div>
         <button
           onClick={() => void tokens.refetch()}
@@ -79,7 +81,9 @@ function TokensPage() {
             </span>
             <p className="mt-3 text-sm font-semibold">No tokens yet</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              The live SPL token-account reader is not connected in this build. No token balances are fabricated, and token transfers stay disabled until mint addresses and signing are verified.
+              The live SPL token-account reader is not connected in this build. No token balances
+              are fabricated, and token transfers stay disabled until mint addresses and signing are
+              verified.
             </p>
           </div>
         ) : (
