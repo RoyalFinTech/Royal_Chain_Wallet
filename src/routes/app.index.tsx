@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+
 import {
   Bell,
   ScanLine,
@@ -17,23 +17,18 @@ import {
   ArrowLeftRight,
   Lock,
 } from "lucide-react";
-import { WalletCard } from "@/components/wallet/WalletCard";
 import { TransactionCard } from "@/components/wallet/TransactionCard";
 import { WalletStrip } from "@/components/wallet/WalletStrip";
 import { ThemeToggle } from "@/components/brand/ThemeToggle";
+import { Logo } from "@/components/brand/Logo";
 import { formatMoney } from "@/lib/mock-data";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { useStoredWallet, useTransactionHistory } from "@/hooks/use-wallet";
-import {
-  CURRENCY_LIST,
-  type CurrencyCode,
-  CURRENCY_BALANCES,
-  formatCurrency,
-} from "@/lib/currencies";
+import { useStoredWallet, useTransactionHistory, usePortfolio } from "@/hooks/use-wallet";
+import { ASSET_CATALOG } from "@/lib/services";
+import { isChainLive } from "@/lib/config/chains";
+import { tokenContractAddress } from "@/lib/config/tokens";
 import {
   TransactionListSkeleton,
-  CurrencyChipSkeleton,
-  WalletBalanceSkeleton,
   AccountSummarySkeleton,
   InsightCardSkeleton,
 } from "@/components/ui/skeletons";
@@ -72,37 +67,24 @@ const greet = () => {
 };
 
 const quickActions = [
-  { to: "/send", label: "Send", icon: Send, color: "from-amber-400 to-yellow-600" },
-  {
-    to: "/app/receive",
-    label: "Receive",
-    icon: ArrowDownToLine,
-    color: "from-emerald-400 to-teal-600",
-  },
-  { to: "/app/swap", label: "Swap", icon: ArrowLeftRight, color: "from-cyan-400 to-blue-600" },
-  { to: "/app/staking", label: "Stake", icon: Lock, color: "from-lime-400 to-green-600" },
-  { to: "/deposit", label: "Add Funds", icon: Plus, color: "from-violet-400 to-purple-600" },
-  { to: "/app/payments", label: "Pay", icon: Receipt, color: "from-blue-400 to-indigo-600" },
-  { to: "/app/exchange", label: "Exchange", icon: Repeat, color: "from-rose-400 to-red-600" },
-  { to: "/qr", label: "Scan QR", icon: QrCode, color: "from-orange-400 to-amber-600" },
-  {
-    to: "/app/ecosystem",
-    label: "Ecosystem",
-    icon: LayoutGrid,
-    color: "from-fuchsia-400 to-purple-600",
-  },
+  { to: "/send", label: "Send Crypto", icon: Send, color: "from-amber-400 to-yellow-600" },
+  { to: "/app/receive", label: "Receive", icon: ArrowDownToLine, color: "from-emerald-400 to-teal-600" },
+  { to: "/qr", label: "QR Tools", icon: QrCode, color: "from-orange-400 to-amber-600" },
+  { to: "/app/tokens", label: "Tokens", icon: Wallet, color: "from-cyan-400 to-blue-600" },
+  { to: "/app/walletconnect", label: "WalletConnect", icon: ArrowLeftRight, color: "from-violet-400 to-purple-600" },
+  { to: "/app/transactions", label: "Activity", icon: Receipt, color: "from-blue-400 to-indigo-600" },
+  { to: "/app/swap", label: "Swap Preview", icon: Repeat, color: "from-rose-400 to-red-600" },
+  { to: "/app/security", label: "Security", icon: Lock, color: "from-lime-400 to-green-600" },
 ];
 
 function Dashboard() {
-  const [currency, setCurrency] = useState<CurrencyCode>("USD");
   const storedWallet = useStoredWallet();
+  const portfolio = usePortfolio(storedWallet);
   const solanaAddress = storedWallet?.addresses.solana.address;
   const walletLabel = solanaAddress
     ? `RCW-${solanaAddress.slice(-8, -4).toUpperCase()}-${solanaAddress.slice(-4).toUpperCase()}`
     : "No wallet created";
   const txHistory = useTransactionHistory(storedWallet);
-  const loadingCurrencies = useSimulatedLoading(500);
-  const loadingBalance = useSimulatedLoading(600);
   const loadingInsights = useSimulatedLoading(800);
 
   return (
@@ -110,8 +92,8 @@ function Dashboard() {
       {/* Top bar */}
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full gradient-gold font-display text-sm font-bold text-navy shadow-glow">
-            FN
+          <div className="shrink-0">
+            <Logo size={44} />
           </div>
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">{greet()},</p>
@@ -149,52 +131,63 @@ function Dashboard() {
         <WalletStrip />
       </div>
 
-      {/* Wallet card (multi-currency display) */}
-      <div className="mt-4">
-        {loadingBalance ? (
-          <WalletBalanceSkeleton />
-        ) : (
-          <WalletCard currency={currency} onCurrencyChange={setCurrency} />
-        )}
-      </div>
-
       <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
         <p className="text-[11px] leading-5 text-muted-foreground">
-          Preview data: fiat conversions, market trends, and some portfolio UI values are
-          illustrative until a live price provider is configured. Network balances are shown as zero
-          when their RPC is not configured. Transfers do not simulate success.
+          Network balances are shown only when the corresponding RPC is configured. USD prices and trend charts are sample estimates until a live market-data source is connected. Transfers never simulate success.
         </p>
       </div>
 
-      {/* Currency strip */}
-      <div className="no-scrollbar mt-4 -mx-5 flex gap-2 overflow-x-auto px-5">
-        {loadingCurrencies
-          ? Array.from({ length: 5 }).map((_, i) => <CurrencyChipSkeleton key={i} />)
-          : CURRENCY_LIST.map((c, i) => (
-              <button
-                key={c.code}
-                onClick={() => setCurrency(c.code)}
-                className={`press shrink-0 animate-fade-in rounded-2xl border px-3 py-2 text-left transition ${c.code === currency ? "border-gold bg-gold/10" : "border-border bg-card"}`}
-                style={staggerDelay(i, 40)}
-              >
-                <p className="text-[10px] font-medium text-muted-foreground">
-                  {c.flag} {c.code}
+      <section className="mt-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold">Multi-chain assets</h2>
+          <Link to="/app/tokens" className="text-xs text-gold hover:underline">Token details</Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            { symbol: "BTC", chain: "bitcoin", name: "Bitcoin" },
+            { symbol: "ETH", chain: "ethereum", name: "Ethereum" },
+            { symbol: "BNB", chain: "bnb", name: "BNB Chain" },
+            { symbol: "SOL", chain: "solana", name: "Solana" },
+          ] as const).map(({ symbol, chain, name }) => {
+            const meta = ASSET_CATALOG[symbol];
+            const live = isChainLive(chain);
+            const balance = portfolio.data?.assets.find((asset) => asset.symbol === symbol);
+            return (
+              <div key={symbol} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+                <div className="flex items-center gap-2">
+                  <span className={`grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br ${meta.iconGradient} text-xs font-bold text-white`}>
+                    {symbol.slice(0, 1)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{name}</p>
+                    <p className="text-[10px] text-muted-foreground">{symbol}</p>
+                  </div>
+                </div>
+                <p className="mt-4 font-display text-lg font-bold">
+                  {!live ? "RPC not connected" : portfolio.isLoading ? "Loading…" : `${balance?.amount ?? 0} ${symbol}`}
                 </p>
-                <p className="font-display text-xs font-bold">
-                  {formatCurrency(CURRENCY_BALANCES[c.code], c.code)}
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {!live ? "No on-chain balance fetched" : portfolio.isError ? "Balance unavailable" : `USD value is estimated`}
                 </p>
-              </button>
-            ))}
-        <Link
-          to="/app/currencies"
-          className="grid shrink-0 place-items-center rounded-2xl border border-dashed border-border px-3 text-[10px] font-medium text-muted-foreground"
-        >
-          <span className="flex items-center gap-1">
-            <Wallet className="h-3 w-3" /> Manage
-          </span>
-        </Link>
-      </div>
+              </div>
+            );
+          })}
+          <div className="rounded-2xl border border-dashed border-gold/40 bg-gold/5 p-4">
+            <div className="flex items-center gap-2">
+              <span className="grid h-9 w-9 place-items-center rounded-full gradient-gold text-xs font-bold text-navy">R</span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">Royal Token</p>
+                <p className="text-[10px] text-muted-foreground">ROY · planned SPL token</p>
+              </div>
+            </div>
+            <p className="mt-4 font-display text-lg font-bold">
+              {tokenContractAddress("ROY") ? "Token reader not connected" : "Mint not configured"}
+            </p>
+            <p className="mt-1 text-[10px] text-muted-foreground">Not yet verified on-chain</p>
+          </div>
+        </div>
+      </section>
 
       {/* Quick Actions */}
       <section className="mt-8">
