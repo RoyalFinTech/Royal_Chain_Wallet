@@ -9,6 +9,15 @@ describe("wallet/derive", () => {
     expect(validateMnemonic(m)).toBe(true);
   });
 
+  it("generates fresh valid recovery phrases instead of reusing a static phrase", () => {
+    const phrases = Array.from({ length: 6 }, () => generateMnemonic(128));
+    expect(new Set(phrases).size).toBe(phrases.length);
+    for (const phrase of phrases) {
+      expect(phrase.split(" ")).toHaveLength(12);
+      expect(validateMnemonic(phrase)).toBe(true);
+    }
+  });
+
   it("rejects an invalid mnemonic", () => {
     expect(validateMnemonic("not a real mnemonic at all here")).toBe(false);
   });
