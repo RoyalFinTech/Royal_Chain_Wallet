@@ -9,7 +9,7 @@ import { isChainLive, chainEndpoint } from "@/lib/config/chains";
 import { getEvmBalance, getEvmBlockNumber, getEvmHealth, requireRpcUrl } from "./rpc/evm-rpc";
 
 export async function getBalance(address: string): Promise<AssetBalance> {
-  const priced = sampleMarketData(address, "ETH");
+  const priced = sampleMarketData("ETH");
   if (!isChainLive("ethereum")) {
     return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
   }
