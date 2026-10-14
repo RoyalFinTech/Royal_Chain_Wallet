@@ -21,7 +21,7 @@ import { WalletCard } from "@/components/wallet/WalletCard";
 import { TransactionCard } from "@/components/wallet/TransactionCard";
 import { WalletStrip } from "@/components/wallet/WalletStrip";
 import { ThemeToggle } from "@/components/brand/ThemeToggle";
-import { SPEND_DATA, INCOME_DATA, formatMoney } from "@/lib/mock-data";
+import { formatMoney } from "@/lib/mock-data";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { useStoredWallet, useTransactionHistory } from "@/hooks/use-wallet";
 import {
@@ -43,6 +43,26 @@ import { staggerDelay } from "@/lib/motion";
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
 });
+
+const BTC_TREND_DATA = [
+  { name: "Mon", amount: 61800 },
+  { name: "Tue", amount: 62400 },
+  { name: "Wed", amount: 61750 },
+  { name: "Thu", amount: 63600 },
+  { name: "Fri", amount: 62900 },
+  { name: "Sat", amount: 64100 },
+  { name: "Sun", amount: 64200 },
+];
+
+const SOL_TREND_DATA = [
+  { name: "Mon", amount: 151 },
+  { name: "Tue", amount: 149 },
+  { name: "Wed", amount: 153 },
+  { name: "Thu", amount: 147 },
+  { name: "Fri", amount: 150 },
+  { name: "Sat", amount: 146 },
+  { name: "Sun", amount: 148 },
+];
 
 const greet = () => {
   const h = new Date().getHours();
@@ -204,7 +224,8 @@ function Dashboard() {
 
       {/* Insights */}
       <section className="mt-8">
-        <h2 className="mb-3 font-display text-lg font-bold">Financial insights</h2>
+        <h2 className="mb-1 font-display text-lg font-bold">Crypto market preview</h2>
+        <p className="mb-3 text-[11px] text-muted-foreground">Illustrative 7-day trajectories · not live market data</p>
         {loadingInsights ? (
           <>
             <div className="grid grid-cols-2 gap-3">
@@ -218,10 +239,22 @@ function Dashboard() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <InsightCard title="Spending" total={7350} trend={-8} data={SPEND_DATA} tone="down" />
-              <InsightCard title="Income" total={8450} trend={12} data={INCOME_DATA} tone="up" />
+              <InsightCard
+                title="Bitcoin (BTC)"
+                total={64200}
+                trend={2.4}
+                data={BTC_TREND_DATA}
+                tone="up"
+              />
+              <InsightCard
+                title="Solana (SOL)"
+                total={148}
+                trend={-1.2}
+                data={SOL_TREND_DATA}
+                tone="down"
+              />
             </div>
-            <StatsGrid />
+<div className="mt-3 rounded-2xl border border-border bg-card p-3 text-xs leading-5 text-muted-foreground">Live spot prices, portfolio valuations, and historical charts need a market-data provider. These sample trajectories are visual previews only and should not be used to make trading decisions.</div>
           </>
         )}
       </section>
@@ -278,7 +311,7 @@ function InsightCard({
   const positive = tone === "up";
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card p-4">
-      <p className="text-xs text-muted-foreground">{title} · 7d</p>
+      <p className="text-xs text-muted-foreground">{title} · sample 7d</p>
       <p className="mt-1 font-display text-xl font-bold">{formatMoney(total)}</p>
       <div
         className={`mt-1 inline-flex items-center gap-1 text-xs ${positive ? "text-success" : "text-destructive"}`}
@@ -320,21 +353,3 @@ function InsightCard({
   );
 }
 
-function StatsGrid() {
-  const stats = [
-    { label: "Transactions", value: "38", sub: "this month" },
-    { label: "Saved", value: "D2,400", sub: "in Vault" },
-    { label: "Cashback", value: "D120", sub: "earned" },
-  ];
-  return (
-    <div className="mt-3 grid grid-cols-3 gap-2">
-      {stats.map((s) => (
-        <div key={s.label} className="rounded-2xl border border-border bg-card p-3 text-center">
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{s.label}</p>
-          <p className="mt-1 font-display text-sm font-bold">{s.value}</p>
-          <p className="text-[10px] text-muted-foreground">{s.sub}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
