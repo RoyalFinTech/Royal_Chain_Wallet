@@ -34,8 +34,12 @@ export function WalletCard({ walletId, address }: WalletCardProps) {
             <Wallet className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-white/60">Royal Chain Wallet</p>
-            <p className="mt-1 font-mono text-sm text-white/90">{displayedWalletId ?? "No wallet yet"}</p>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-white/60">
+              Royal Chain Wallet
+            </p>
+            <p className="mt-1 font-mono text-sm text-white/90">
+              {displayedWalletId ?? "No wallet yet"}
+            </p>
             <p className="mt-1 break-all font-mono text-[11px] text-white/60">
               {displayedAddress ?? "Create or import a wallet to derive your public addresses"}
             </p>
@@ -48,8 +52,8 @@ export function WalletCard({ walletId, address }: WalletCardProps) {
             {activeWallet ? "On-chain balance status" : "Wallet setup required"}
           </p>
           <p className="mt-2 text-sm leading-5 text-white/70">
-            This card no longer shows sample fiat balances. Native crypto balances are shown only
-            in the Crypto Assets view when a chain RPC is configured.
+            This card no longer shows sample fiat balances. Native crypto balances are shown only in
+            the Crypto Assets view when a chain RPC is configured.
           </p>
         </div>
 
@@ -57,7 +61,8 @@ export function WalletCard({ walletId, address }: WalletCardProps) {
           to={activeWallet ? "/app/currencies" : "/create-wallet"}
           className="mt-5 grid h-11 w-full place-items-center rounded-xl gradient-gold text-sm font-semibold text-navy"
         >
-          {activeWallet ? "View crypto assets" : "Create wallet"} <ArrowRight className="ml-1 inline h-4 w-4" />
+          {activeWallet ? "View crypto assets" : "Create wallet"}{" "}
+          <ArrowRight className="ml-1 inline h-4 w-4" />
         </Link>
       </div>
     </div>
