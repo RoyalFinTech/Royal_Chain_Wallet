@@ -49,8 +49,8 @@ export const recordTransaction = createServerFn({ method: "POST" })
       kind: z
         .enum(["transfer", "deposit", "withdrawal", "merchant_payment", "refund", "reversal"])
         .default("transfer"),
-      amount: z.number().positive(),
-      usdValue: z.number().nonnegative().optional(),
+      amount: z.number().finite().positive(),
+      usdValue: z.number().finite().nonnegative().optional(),
       toAddress: z.string().max(256).optional(),
       txHash: z.string().max(256).optional(),
       /**
@@ -64,7 +64,7 @@ export const recordTransaction = createServerFn({ method: "POST" })
           z.object({
             ledgerAccountId: z.string().uuid(),
             direction: z.enum(["debit", "credit"]),
-            amount: z.number().positive(),
+            amount: z.number().finite().positive(),
           }),
         )
         .length(2),
