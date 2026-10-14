@@ -9,7 +9,6 @@
  * simulated flow so the app keeps working end-to-end in an unconfigured
  * environment.
  */
-import { mockTransactions } from "./mockData";
 import type { AssetSymbol, QuoteResult, TxRecord } from "./types";
 import { isChainLive } from "@/lib/config/chains";
 import { sendAndConfirm } from "@/lib/wallet/signing";
@@ -18,10 +17,12 @@ import type { ChainId } from "@/lib/wallet/derive";
 
 const sessionTxs = new Map<string, TxRecord[]>();
 
-export async function getHistory(address: string, symbols: AssetSymbol[]): Promise<TxRecord[]> {
-  const base = mockTransactions(address, symbols, 14);
-  const extra = sessionTxs.get(address) ?? [];
-  return [...extra, ...base].sort((a, b) => b.timestamp - a.timestamp);
+export async function getHistory(address: string, _symbols: AssetSymbol[]): Promise<TxRecord[]> {
+  // Only actual transactions created during this local session are surfaced.
+  // Historical chain activity needs a transaction-indexer integration; never
+  // fill the list with fabricated incoming/outgoing transactions.
+  const localRecords = sessionTxs.get(address) ?? [];
+  return [...localRecords].sort((a, b) => b.timestamp - a.timestamp);
 }
 
 export async function submitTransfer(opts: {
