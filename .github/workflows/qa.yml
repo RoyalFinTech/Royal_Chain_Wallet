@@ -41,6 +41,41 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Dependency audit summary (non-blocking)
+        # Print package-level advisory metadata for review without running
+        # npm audit fix or silently changing dependency versions.
+        continue-on-error: true
+        shell: bash
+        run: |
+          npm audit --json > "$RUNNER_TEMP/npm-audit.json" || true
+          node - "$RUNNER_TEMP/npm-audit.json" <<'NODE'
+          const fs = require("node:fs");
+          const path = process.argv[2];
+          let report;
+          try {
+            report = JSON.parse(fs.readFileSync(path, "utf8"));
+          } catch (error) {
+            console.log("npm audit report could not be parsed:", String(error));
+            process.exit(0);
+          }
+          console.log("Audit severity totals:", JSON.stringify(report.metadata?.vulnerabilities ?? {}));
+          for (const [name, item] of Object.entries(report.vulnerabilities ?? {})) {
+            const via = (item.via ?? []).map((entry) =>
+              typeof entry === "string"
+                ? entry
+                : { title: entry.title, range: entry.range, url: entry.url }
+            );
+            console.log(JSON.stringify({
+              package: name,
+              severity: item.severity,
+              direct: item.isDirect,
+              range: item.range,
+              fixAvailable: item.fixAvailable,
+              advisories: via
+            }));
+          }
+          NODE
+
       # The changed TypeScript files were created through repository API
       # edits, so apply the project's actual Prettier rules before verification.
       # Commit only to this security branch, then dispatch a clean check run
