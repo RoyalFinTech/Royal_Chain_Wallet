@@ -100,7 +100,8 @@ function Receive() {
           <Wallet className="mx-auto h-9 w-9 text-gold" />
           <h1 className="mt-4 font-display text-xl font-bold">No local wallet found</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create or import a wallet before sharing a receive address. This page will not show a demo address.
+            Create or import a wallet before sharing a receive address. This page will not show a
+            demo address.
           </p>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <Link
@@ -216,7 +217,8 @@ function Receive() {
       <div className="mt-4 flex gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
         <p className="text-xs leading-5 text-muted-foreground">
-          Send only {chainMeta.label} assets to this address. Token deposits, confirmations, and balances depend on the real mint/contract and network integration being enabled.
+          Send only {chainMeta.label} assets to this address. Token deposits, confirmations, and
+          balances depend on the real mint/contract and network integration being enabled.
         </p>
       </div>
     </div>
