@@ -1,13 +1,8 @@
 /**
- * Cross-chain transaction history, send, and swap-quote service.
- *
- * getHistory is still mock/session-based — a real indexer integration is
- * a separate piece of work (see docs/REMAINING_WORK.md). submitTransfer
- * now performs a REAL signed broadcast when the target chain has a live
- * RPC endpoint configured (lib/config/chains.ts isChainLive) and a
- * mnemonic is supplied; otherwise it falls back to the existing
- * simulated flow so the app keeps working end-to-end in an unconfigured
- * environment.
+ * Cross-chain transaction history, native-asset sends, and sample swap quotes.
+ * History only includes real hashes created during this browser session; a
+ * chain indexer is not connected. Unsupported transfers fail closed and never
+ * create a synthetic hash or success status. Swap quotes are preview-only.
  */
 import type { AssetSymbol, QuoteResult, TxRecord } from "./types";
 import { isChainLive } from "@/lib/config/chains";
