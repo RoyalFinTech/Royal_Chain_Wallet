@@ -7,7 +7,7 @@ import {
   type CurrencyCode,
   CURRENCY_LIST,
 } from "@/lib/currencies";
-import { DEMO_IDENTITY } from "@/lib/wallet-identity";
+import { useStoredWallet } from "@/hooks/use-wallet";
 
 interface WalletCardProps {
   walletId?: string;
@@ -18,14 +18,23 @@ interface WalletCardProps {
 }
 
 export function WalletCard({
-  walletId = DEMO_IDENTITY.walletId,
-  address = DEMO_IDENTITY.address,
+  walletId,
+  address,
   currency = "USD",
   onCurrencyChange,
   balance,
 }: WalletCardProps) {
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
+  const activeWallet = useStoredWallet();
+  const derivedAddress = activeWallet?.addresses.solana.address;
+  const displayedWalletId =
+    walletId ??
+    (derivedAddress
+      ? `RCW-${derivedAddress.slice(-8, -4).toUpperCase()}-${derivedAddress.slice(-4).toUpperCase()}`
+      : "No wallet yet");
+  const displayedAddress = address ?? derivedAddress ?? "Create or import a wallet to see your address";
+  const hasWallet = Boolean(activeWallet || (walletId && address));
   const value = balance ?? CURRENCY_BALANCES[currency];
   const meta = CURRENCIES[currency];
 
@@ -38,17 +47,17 @@ export function WalletCard({
       <div className="relative flex items-start justify-between">
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-[0.25em] text-white/60">Royal Wallet ID</p>
-          <p className="mt-1 font-mono text-sm text-white/90">{walletId}</p>
-          <p className="mt-0.5 font-mono text-[11px] text-white/50">{address}</p>
+          <p className="mt-1 font-mono text-sm text-white/90">{displayedWalletId}</p>
+          <p className="mt-0.5 break-all font-mono text-[11px] text-white/50">{displayedAddress}</p>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[10px] text-gold ring-1 ring-gold/40">
-          <ShieldCheck className="h-3 w-3" /> Protected
+          <ShieldCheck className="h-3 w-3" /> {hasWallet ? "Local wallet" : "Setup needed"}
         </span>
       </div>
 
       <div className="relative mt-7">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-white/60">Available balance</p>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-white/60">Portfolio value · demo</p>
           <div className="relative">
             <button
               onClick={() => setOpen((o) => !o)}
@@ -92,7 +101,7 @@ export function WalletCard({
       </div>
 
       <div className="relative mt-6 flex items-center justify-between text-xs text-white/60">
-        <span className="font-mono">•••• {walletId.slice(-4)}</span>
+        <span className="font-mono">{hasWallet ? `•••• ${displayedWalletId.slice(-4)}` : "Create a wallet to begin"}</span>
         <span className="font-display tracking-[0.35em]">ROYAL</span>
       </div>
     </div>
