@@ -114,7 +114,9 @@ function Dashboard() {
             <p className="truncate font-display text-base font-bold">Your Royal Wallet</p>
             <p className="mt-0.5 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
               <span>{walletLabel}</span>
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-success/15 px-1.5 py-0.5 text-success">
+              <span
+                className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 ${storedWallet ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}
+              >
                 <ShieldCheck className="h-2.5 w-2.5" />{" "}
                 {storedWallet ? "PIN encrypted" : "Setup needed"}
               </span>
