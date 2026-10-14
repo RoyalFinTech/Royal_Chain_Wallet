@@ -13,13 +13,28 @@ export const listTransactions = createServerFn({ method: "GET" })
     z.object({ walletId: z.string().uuid(), limit: z.number().int().min(1).max(100).default(20) }),
   )
   .handler(async ({ data: input, context }) => {
+    // Don't rely only on RLS for this endpoint: verify the requested wallet
+    // is owned by the authenticated account before reading its transactions.
+    const { data: wallet, error: walletError } = await context.db
+      .from("wallets")
+      .select("id")
+      .eq("id", input.walletId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+
+    if (walletError) {
+      console.error("[transactions] Wallet ownership lookup failed:", walletError.message);
+      throw new Error("Unable to verify wallet ownership.");
+    }
+    if (!wallet) throw new Error("Wallet not found or not owned by this user.");
+
     const { data, error } = await context.db
       .from("transactions")
       .select("*")
       .eq("wallet_id", input.walletId)
       .order("created_at", { ascending: false })
       .limit(input.limit);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error("Unable to load transactions.");
     return data;
   });
 
@@ -35,16 +50,14 @@ export const recordTransaction = createServerFn({ method: "POST" })
         .enum(["transfer", "deposit", "withdrawal", "merchant_payment", "refund", "reversal"])
         .default("transfer"),
       amount: z.number().positive(),
-      usdValue: z.number().optional(),
-      toAddress: z.string().optional(),
-      txHash: z.string().optional(),
+      usdValue: z.number().nonnegative().optional(),
+      toAddress: z.string().max(256).optional(),
+      txHash: z.string().max(256).optional(),
       /**
-       * The wallet-side and counterparty-side ledger account ids (see
-       * ledger_accounts, migration 00000000000003). Callers resolve
-       * these up front — e.g. the user's own ledger account for this
-       * asset, and a system 'external_unmatched' account for the other
-       * side of a transfer to/from an address outside Royal Chain
-       * Wallet.
+       * This server endpoint supports a simple single-asset posting only.
+       * Database validation independently limits this to one user account
+       * and one external counterparty account; callers cannot choose arbitrary
+       * ledger accounts for a multi-account posting.
        */
       ledgerEntries: z
         .array(
@@ -54,22 +67,47 @@ export const recordTransaction = createServerFn({ method: "POST" })
             amount: z.number().positive(),
           }),
         )
-        .min(2),
+        .length(2),
     }),
   )
   .handler(async ({ data: input, context }) => {
-    // Rate limit: a given user can record at most 20 transactions/minute
-    // through this endpoint — real broadcasts are inherently throttled by
-    // chain block times, so this mainly guards against a buggy/malicious
-    // client hammering the write path.
-    const withinLimit = await checkServerRateLimit(`tx:record:${context.userId}`, 20, 60);
+    const { data: wallet, error: walletError } = await context.db
+      .from("wallets")
+      .select("id")
+      .eq("id", input.walletId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+
+    if (walletError) {
+      console.error("[transactions] Wallet ownership lookup failed:", walletError.message);
+      throw new Error("Unable to verify wallet ownership.");
+    }
+    if (!wallet) throw new Error("Wallet not found or not owned by this user.");
+
+    const { data: asset, error: assetError } = await context.db
+      .from("assets")
+      .select("id, chain, is_active")
+      .eq("id", input.assetId)
+      .maybeSingle();
+
+    if (assetError) {
+      console.error("[transactions] Asset lookup failed:", assetError.message);
+      throw new Error("Unable to verify the requested asset.");
+    }
+    if (!asset || !asset.is_active || asset.chain !== input.chain) {
+      throw new Error("Asset is unavailable for the requested chain.");
+    }
+
+    // The request-authenticated client is required for auth.uid()-bound
+    // rate limiting. The limiter fails closed if the database control fails.
+    const withinLimit = await checkServerRateLimit(
+      context.db,
+      `tx:record:${context.userId}`,
+      20,
+      60,
+    );
     if (!withinLimit) throw new Error("Too many transaction writes — please slow down.");
 
-    // Single atomic call: inserts the transaction row AND posts balanced
-    // ledger entries in one Postgres transaction (see migration
-    // 00000000000004) — either both happen, or neither does. Verified
-    // locally: an unbalanced ledgerEntries set rolls back the whole
-    // insert, not just the ledger side (see docs/PRODUCTION_READINESS.md).
     const { data, error } = await context.db.rpc("record_transaction_with_ledger", {
       p_wallet_id: input.walletId,
       p_asset_id: input.assetId,
@@ -87,7 +125,10 @@ export const recordTransaction = createServerFn({ method: "POST" })
       p_counterparty_address: input.toAddress ?? null,
       p_tx_hash: input.txHash ?? null,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[transactions] Atomic transaction recording failed:", error.message);
+      throw new Error("Transaction recording failed validation or could not be completed.");
+    }
 
     logSecurityEvent("transaction.recorded", data.id, {
       chain: input.chain,
