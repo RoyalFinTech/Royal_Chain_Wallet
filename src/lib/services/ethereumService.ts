@@ -1,19 +1,15 @@
 /**
- * Ethereum chain service.
- *
- * Live when VITE_ETH_RPC_URL is set (real eth_getBalance via ethers.js
- * JsonRpcProvider — see rpc/evm-rpc.ts); falls back to deterministic mock
- * data otherwise. Pricing is still mock-derived even when the balance is
- * live — see solanaService.ts header for why.
+ * Ethereum chain service. Balance reads require the configured EVM RPC.
+ * Price metadata is an illustrative estimate until a live market feed exists.
  */
 import { isAddress } from "ethers";
-import { mockBalance, mockNetworkStatus } from "./mockData";
+import { sampleMarketData, mockNetworkStatus } from "./mockData";
 import type { AssetBalance, NetworkStatus } from "./types";
 import { isChainLive, chainEndpoint } from "@/lib/config/chains";
 import { getEvmBalance, getEvmBlockNumber, getEvmHealth, requireRpcUrl } from "./rpc/evm-rpc";
 
 export async function getBalance(address: string): Promise<AssetBalance> {
-  const priced = mockBalance(address, "ETH");
+  const priced = sampleMarketData(address, "ETH");
   if (!isChainLive("ethereum")) {
     return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
   }
