@@ -15,7 +15,7 @@ export const listWallets = createServerFn({ method: "GET" })
     const { data, error } = await context.db
       .from("wallets")
       .select("*")
-      .eq("user_id", context.userId);
+      .eq("user_id", context.profileId);
     if (error) throw new Error(error.message);
     return data;
   });
@@ -24,16 +24,13 @@ export const getWalletAccounts = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .validator(z.object({ walletId: z.string().uuid() }))
   .handler(async ({ data: input, context }) => {
-    // Ownership check happens implicitly via RLS once policies are added
-    // (Module 2 migration note); this explicit check is defense-in-depth
-    // for the window before those policies exist.
     const { data: wallet, error: ownErr } = await context.db
       .from("wallets")
       .select("id")
       .eq("id", input.walletId)
-      .eq("user_id", context.userId)
+      .eq("user_id", context.profileId)
       .maybeSingle();
-    if (ownErr) throw new Error(ownErr.message);
+    if (ownErr) throw new Error("Unable to verify wallet ownership.");
     if (!wallet) throw new Error("Wallet not found or not owned by this user.");
 
     const { data, error } = await context.db
@@ -48,23 +45,24 @@ export const createWalletRecord = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .validator(
     z.object({
-      label: z.string().default("Main Wallet"),
-      accounts: z.array(
-        z.object({
-          chain: z.enum(["bitcoin", "ethereum", "bnb", "solana"]),
-          address: z.string(),
-          derivationPath: z.string(),
-        }),
-      ),
+      label: z.string().trim().min(1).max(80).default("Main Wallet"),
+      accounts: z
+        .array(
+          z.object({
+            chain: z.enum(["bitcoin", "ethereum", "bnb", "solana"]),
+            address: z.string().trim().min(1).max(256),
+            derivationPath: z.string().trim().min(1).max(128),
+          }),
+        )
+        .min(1)
+        .max(4),
     }),
   )
   .handler(async ({ data: input, context }) => {
-    // Note: the mnemonic itself is NEVER sent here — only the public
-    // addresses derived on-device, matching the non-custodial model
-    // documented throughout src/lib/wallet/.
+    // The mnemonic/private keys are never sent to the server.
     const { data: wallet, error: walletErr } = await context.db
       .from("wallets")
-      .insert({ user_id: context.userId, label: input.label, is_primary: true })
+      .insert({ user_id: context.profileId, label: input.label, is_primary: true })
       .select("*")
       .single();
     if (walletErr) throw new Error(walletErr.message);
@@ -77,7 +75,7 @@ export const createWalletRecord = createServerFn({ method: "POST" })
         derivation_path: a.derivationPath,
       })),
     );
-    if (accountsErr) throw new Error(accountsErr.message);
+    if (accountsErr) throw new Error("Wallet was created, but account setup failed. Contact support.");
 
     return wallet;
   });
