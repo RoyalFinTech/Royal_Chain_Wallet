@@ -136,27 +136,14 @@ export function mockBalance(address: string, symbol: AssetSymbol) {
 }
 
 export function mockNetworkStatus(chain: ChainId): NetworkStatus {
-  const rand = rngFor(chain, "network");
-  const labelMap: Record<ChainId, string> = {
-    bitcoin: "Mainnet",
-    ethereum: "Mainnet",
-    bnb: "Mainnet (BSC)",
-    solana: "Mainnet Beta",
-  };
-  const feeMap: Record<ChainId, [number, number]> = {
-    bitcoin: [0.6, 3.2],
-    ethereum: [1.2, 9.5],
-    bnb: [0.05, 0.3],
-    solana: [0.0005, 0.004],
-  };
-  const [lo, hi] = feeMap[chain];
-  const congestionRoll = rand();
+  // A missing RPC must not masquerade as a live block height, fee estimate, or
+  // congestion signal. Values are zero/neutral and the label signals no data.
   return {
     chain,
-    label: labelMap[chain],
-    blockHeight: Math.floor(800_000 + rand() * 4_500_000),
-    avgFeeUsd: Number((lo + rand() * (hi - lo)).toFixed(4)),
-    congestion: congestionRoll > 0.85 ? "high" : congestionRoll > 0.55 ? "moderate" : "low",
+    label: "Not connected",
+    blockHeight: 0,
+    avgFeeUsd: 0,
+    congestion: "moderate",
   };
 }
 
