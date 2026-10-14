@@ -72,7 +72,8 @@ function SwapPage() {
   }, [quote.data, amount, fromSymbol]);
 
   const insufficientBalance = fromAsset ? Number(amount) > fromAsset.amount : false;
-  const canReview = SWAP_ROUTING_ENABLED && !!wallet && Number(amount) > 0 && !insufficientBalance && !!quote.data;
+  const canReview =
+    SWAP_ROUTING_ENABLED && !!wallet && Number(amount) > 0 && !insufficientBalance && !!quote.data;
 
   function flip() {
     setFromSymbol(toSymbol);
@@ -113,7 +114,11 @@ function SwapPage() {
       <div className="px-5 pt-6">
         <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-5 text-muted-foreground">
           <p className="font-semibold text-foreground">Swap preview only</p>
-          <p className="mt-1">Rates and charts below use sample prices. A live swap router, on-chain quote verification, and signed swap instructions are not configured. This screen cannot move assets yet.</p>
+          <p className="mt-1">
+            Rates and charts below use sample prices. A live swap router, on-chain quote
+            verification, and signed swap instructions are not configured. This screen cannot move
+            assets yet.
+          </p>
         </div>
         {/* From */}
         <div className="rounded-3xl border border-border bg-card p-4">
@@ -433,7 +438,9 @@ function ConfirmSwapSheet({
       await unlockWallet(wallet, pin);
       // The quote is illustrative only. Never turn PIN verification into a
       // fake successful swap without a signed, broadcast on-chain route.
-      throw new Error("On-chain swap routing is not configured. This quote is a preview; no assets were moved.");
+      throw new Error(
+        "On-chain swap routing is not configured. This quote is a preview; no assets were moved.",
+      );
     } catch (e) {
       const message = e instanceof Error ? e.message : "Swap failed.";
       setError(message);

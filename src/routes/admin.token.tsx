@@ -21,15 +21,26 @@ function AdminToken() {
   const mintControlsReady = false;
 
   const stats = [
-    { label: "ROY mint address", value: mintAddress ? `${mintAddress.slice(0, 6)}…${mintAddress.slice(-5)}` : "Not configured", icon: Coins },
+    {
+      label: "ROY mint address",
+      value: mintAddress ? `${mintAddress.slice(0, 6)}…${mintAddress.slice(-5)}` : "Not configured",
+      icon: Coins,
+    },
     { label: "On-chain supply", value: "Not queried", icon: Lock },
     { label: "Holder index", value: "Not connected", icon: Send },
-    { label: "Solana RPC", value: hasLiveSolanaRpc ? "Configured" : "Not configured", icon: AlertTriangle },
+    {
+      label: "Solana RPC",
+      value: hasLiveSolanaRpc ? "Configured" : "Not configured",
+      icon: AlertTriangle,
+    },
   ];
 
   return (
     <div>
-      <AdminPageHeader title="ROY Token Management" subtitle="Royal Token · planned Solana SPL token" />
+      <AdminPageHeader
+        title="ROY Token Management"
+        subtitle="Royal Token · planned Solana SPL token"
+      />
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((item) => (
@@ -42,7 +53,9 @@ function AdminToken() {
           <AlertTriangle className="h-4 w-4 text-amber-600" /> Minting is not ready
         </p>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          This repository does not yet have a verified live ROY mint, an audited mint-authority/multisig flow, on-chain supply reads, or tested SPL mint instructions. Controls stay disabled so the dashboard cannot imply a mint or burn has happened.
+          This repository does not yet have a verified live ROY mint, an audited
+          mint-authority/multisig flow, on-chain supply reads, or tested SPL mint instructions.
+          Controls stay disabled so the dashboard cannot imply a mint or burn has happened.
         </p>
       </div>
 
@@ -51,16 +64,26 @@ function AdminToken() {
           <h2 className="font-display text-base font-bold">Pre-mint checklist</h2>
           <div className="mt-4 space-y-3 text-sm">
             {[
-              ["Mint address and network", mintAddress ? "Configured value found; verify it on the intended network" : "Not configured"],
+              [
+                "Mint address and network",
+                mintAddress
+                  ? "Configured value found; verify it on the intended network"
+                  : "Not configured",
+              ],
               ["Decimals and supply cap", "Decision and configuration required"],
               ["Mint authority and multisig", "Secure authority model not implemented"],
               ["Metadata, logo and URI", "On-chain metadata not deployed"],
               ["Testnet mint and verification", "Not tested"],
               ["Mainnet deployment review", "Blocked until all previous checks pass"],
             ].map(([label, status]) => (
-              <div key={label} className="flex items-start justify-between gap-3 border-b border-border pb-3 last:border-b-0">
+              <div
+                key={label}
+                className="flex items-start justify-between gap-3 border-b border-border pb-3 last:border-b-0"
+              >
                 <span className="font-medium">{label}</span>
-                <span className="max-w-[55%] text-right text-xs text-muted-foreground">{status}</span>
+                <span className="max-w-[55%] text-right text-xs text-muted-foreground">
+                  {status}
+                </span>
               </div>
             ))}
           </div>
@@ -69,7 +92,8 @@ function AdminToken() {
         <AdminCard>
           <h2 className="font-display text-base font-bold">Mint controls</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Buttons remain disabled until the mint program, token address, admin authorization, and audit checks are implemented and tested on devnet.
+            Buttons remain disabled until the mint program, token address, admin authorization, and
+            audit checks are implemented and tested on devnet.
           </p>
           <label className="mt-4 block">
             <span className="text-xs font-medium text-muted-foreground">Amount (ROY)</span>
