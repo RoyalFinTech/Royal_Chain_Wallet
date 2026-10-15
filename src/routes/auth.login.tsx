@@ -71,13 +71,14 @@ function Login() {
             <label className="text-xs font-medium text-muted-foreground">Phone number</label>
             <div className="mt-1 flex overflow-hidden rounded-2xl border border-border bg-input/40 focus-within:ring-2 focus-within:ring-gold/60">
               <select
+                aria-label="Country calling code"
                 value={country.code}
                 onChange={(e) => setCountry(COUNTRIES.find((c) => c.code === e.target.value)!)}
                 className="border-r border-border bg-transparent px-3 text-sm focus:outline-none"
               >
                 {COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.flag} {c.dial}
+                    {c.flag} {c.name} ({c.dial})
                   </option>
                 ))}
               </select>
