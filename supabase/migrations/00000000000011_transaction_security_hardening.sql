@@ -267,7 +267,7 @@ begin
     raise exception using errcode='22023', message='Ledger entries must balance against transaction amount';
   end if;
   insert into public.transactions(wallet_id,asset_id,chain,direction,kind,amount,status,usd_value,fee_usd,counterparty_address,tx_hash,memo,confirmed_at)
-  values(p_wallet_id,p_asset_id,p_chain,p_direction,p_kind,p_amount,'pending',p_usd_value,null,p_counterparty_address,p_tx_hash,p_memo,null)
+  values(p_wallet_id,p_asset_id,p_chain,p_direction,p_kind,p_amount,'confirmed',p_usd_value,null,p_counterparty_address,p_tx_hash,p_memo,now())
   returning * into v_tx;
   perform public.post_ledger_entries(v_tx.id,p_entries);
   return v_tx;
