@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 import {
   Bell,
@@ -20,43 +21,36 @@ import {
 import { WalletStrip } from "@/components/wallet/WalletStrip";
 import { ThemeToggle } from "@/components/brand/ThemeToggle";
 import { Logo } from "@/components/brand/Logo";
-import { formatMoney } from "@/lib/mock-data";
+
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { useStoredWallet, useTransactionHistory, usePortfolio } from "@/hooks/use-wallet";
 import { ASSET_CATALOG } from "@/lib/services";
 import { isChainLive } from "@/lib/config/chains";
 import { tokenContractAddress } from "@/lib/config/tokens";
-import {
-  TransactionListSkeleton,
-  AccountSummarySkeleton,
-  InsightCardSkeleton,
-} from "@/components/ui/skeletons";
-import { useSimulatedLoading } from "@/hooks/use-simulated-loading";
-import { staggerDelay } from "@/lib/motion";
+import { TransactionListSkeleton } from "@/components/ui/skeletons";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
 });
 
-const BTC_TREND_DATA = [
-  { name: "Mon", amount: 61800 },
-  { name: "Tue", amount: 62400 },
-  { name: "Wed", amount: 61750 },
-  { name: "Thu", amount: 63600 },
-  { name: "Fri", amount: 62900 },
-  { name: "Sat", amount: 64100 },
-  { name: "Sun", amount: 64200 },
-];
+type MarketAsset = {
+  id: string;
+  symbol: string;
+  name: string;
+  current_price: number;
+  price_change_percentage_7d_in_currency?: number | null;
+  sparkline_in_7d?: { price?: number[] };
+};
 
-const SOL_TREND_DATA = [
-  { name: "Mon", amount: 151 },
-  { name: "Tue", amount: 149 },
-  { name: "Wed", amount: 153 },
-  { name: "Thu", amount: 147 },
-  { name: "Fri", amount: 150 },
-  { name: "Sat", amount: 146 },
-  { name: "Sun", amount: 148 },
-];
+const MARKET_ASSETS = [
+  { id: "bitcoin", label: "Bitcoin (BTC)" },
+  { id: "ethereum", label: "Ethereum (ETH)" },
+  { id: "binancecoin", label: "BNB (BNB)" },
+  { id: "solana", label: "Solana (SOL)" },
+] as const;
+
+const MARKET_URL =
+  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,binancecoin,solana&order=market_cap_desc&per_page=4&page=1&sparkline=true&price_change_percentage=7d";
 
 const greet = () => {
   const h = new Date().getHours();
@@ -99,7 +93,35 @@ function Dashboard() {
     ? `RCW-${solanaAddress.slice(-8, -4).toUpperCase()}-${solanaAddress.slice(-4).toUpperCase()}`
     : "No wallet created";
   const txHistory = useTransactionHistory(storedWallet);
-  const loadingInsights = useSimulatedLoading(800);
+  const [marketData, setMarketData] = useState<MarketAsset[]>([]);
+  const [marketStatus, setMarketStatus] = useState<"loading" | "live" | "unavailable">("loading");
+
+  useEffect(() => {
+    let active = true;
+    const loadMarketData = async () => {
+      try {
+        const response = await fetch(MARKET_URL, { headers: { accept: "application/json" } });
+        if (!response.ok) throw new Error("Market data request failed");
+        const result = (await response.json()) as MarketAsset[];
+        if (!Array.isArray(result)) throw new Error("Unexpected market data response");
+        if (active) {
+          setMarketData(result.filter((asset) => Number.isFinite(asset.current_price)));
+          setMarketStatus("live");
+        }
+      } catch {
+        if (active) {
+          setMarketData([]);
+          setMarketStatus("unavailable");
+        }
+      }
+    };
+    void loadMarketData();
+    const refresh = window.setInterval(() => void loadMarketData(), 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(refresh);
+    };
+  }, []);
 
   return (
     <div className="mx-auto w-full px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
@@ -253,47 +275,49 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* Insights */}
+      {/* Live market insights */}
       <section className="mt-8">
-        <h2 className="mb-1 font-display text-lg font-bold">Crypto market preview</h2>
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-bold">Live crypto market</h2>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${marketStatus === "live" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${marketStatus === "live" ? "bg-success" : "bg-muted-foreground"}`} />
+            {marketStatus === "live" ? "Live · refreshes every minute" : marketStatus === "loading" ? "Loading market data…" : "Market data unavailable"}
+          </span>
+        </div>
         <p className="mb-3 text-[11px] text-muted-foreground">
-          Illustrative 7-day trajectories · not live market data
+          USD spot prices and seven-day direction from CoinGecko. Prices can move quickly; verify before trading.
         </p>
-        {loadingInsights ? (
-          <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <InsightCardSkeleton />
-              <InsightCardSkeleton />
-            </div>
-            <div className="mt-3">
-              <AccountSummarySkeleton />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {MARKET_ASSETS.map((asset) => {
+            const market = marketData.find((item) => item.id === asset.id);
+            if (!market) {
+              return (
+                <div key={asset.id} className="flex min-h-36 flex-col justify-between rounded-2xl border border-dashed border-border bg-card p-4">
+                  <p className="text-xs font-semibold">{asset.label}</p>
+                  <div>
+                    <p className="font-display text-lg font-bold">—</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {marketStatus === "loading" ? "Fetching latest quote…" : "Live quote not available"}
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+            const sparkline = market.sparkline_in_7d?.price ?? [];
+            const chartData = sparkline.map((amount, index) => ({ name: String(index + 1), amount }));
+            const trend = market.price_change_percentage_7d_in_currency ?? 0;
+            return (
               <InsightCard
-                title="Bitcoin (BTC)"
-                total={64200}
-                trend={2.4}
-                data={BTC_TREND_DATA}
-                tone="up"
+                key={asset.id}
+                title={asset.label}
+                total={market.current_price}
+                trend={trend}
+                data={chartData}
+                tone={trend >= 0 ? "up" : "down"}
               />
-              <InsightCard
-                title="Solana (SOL)"
-                total={148}
-                trend={-1.2}
-                data={SOL_TREND_DATA}
-                tone="down"
-              />
-            </div>
-            <div className="mt-3 rounded-2xl border border-border bg-card p-3 text-xs leading-5 text-muted-foreground">
-              Live spot prices, portfolio valuations, and historical charts need a market-data
-              provider. These sample trajectories are visual previews only and should not be used to
-              make trading decisions.
-            </div>
-          </>
-        )}
+            );
+          })}
+        </div>
       </section>
 
       {/* Recent Transactions */}
@@ -367,16 +391,17 @@ function InsightCard({
   tone: "up" | "down";
 }) {
   const positive = tone === "up";
+  const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: total < 1 ? 6 : 2 }).format(total);
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card p-4">
-      <p className="text-xs text-muted-foreground">{title} · sample 7d</p>
-      <p className="mt-1 font-display text-xl font-bold">{formatMoney(total)}</p>
+      <p className="text-xs text-muted-foreground">{title} · live 7d</p>
+      <p className="mt-1 font-display text-xl font-bold">{usd}</p>
       <div
         className={`mt-1 inline-flex items-center gap-1 text-xs ${positive ? "text-success" : "text-destructive"}`}
       >
         {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
         {trend > 0 ? "+" : ""}
-        {trend}%
+        {trend.toFixed(2)}%
       </div>
       <div className="mt-3 h-16">
         <ResponsiveContainer width="100%" height="100%">
