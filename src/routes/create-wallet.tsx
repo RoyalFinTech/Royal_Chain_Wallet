@@ -16,6 +16,7 @@ import { Logo } from "@/components/brand/Logo";
 import { NetworkGrid } from "@/components/brand/FxEffects";
 import { importWallet, shortenAddress, validateMnemonic } from "@/lib/wallet";
 import { deriveAllChains, generateMnemonic, type DerivedAddresses } from "@/lib/wallet/derive";
+import { chooseVerificationIndices } from "@/lib/security/recovery-challenge";
 
 export const Route = createFileRoute("/create-wallet")({
   component: CreateWallet,
@@ -23,21 +24,6 @@ export const Route = createFileRoute("/create-wallet")({
 
 type Step = 1 | 2 | 3 | 4 | 5;
 type WalletPreview = { addresses: DerivedAddresses; wordCount: 12 | 24 };
-
-/** Select unique recovery-word positions with the browser's cryptographic RNG. */
-function chooseVerificationIndices(wordCount: number, requestedCount = 6): number[] {
-  if (!globalThis.crypto?.getRandomValues) {
-    throw new Error("Secure randomness is unavailable for recovery phrase verification.");
-  }
-  const indices = Array.from({ length: wordCount }, (_, index) => index);
-  for (let i = indices.length - 1; i > 0; i -= 1) {
-    const random = new Uint32Array(1);
-    globalThis.crypto.getRandomValues(random);
-    const j = random[0] % (i + 1);
-    [indices[i], indices[j]] = [indices[j], indices[i]];
-  }
-  return indices.slice(0, Math.min(requestedCount, wordCount)).sort((a, b) => a - b);
-}
 
 function CreateWallet() {
   const navigate = useNavigate();
