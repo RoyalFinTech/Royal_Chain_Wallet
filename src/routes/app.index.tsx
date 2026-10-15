@@ -322,7 +322,11 @@ function Dashboard() {
               name: String(index + 1),
               amount,
             }));
-            const trend = typeof market.price_change_percentage_7d_in_currency === "number" && Number.isFinite(market.price_change_percentage_7d_in_currency) ? market.price_change_percentage_7d_in_currency : null;
+            const trend =
+              typeof market.price_change_percentage_7d_in_currency === "number" &&
+              Number.isFinite(market.price_change_percentage_7d_in_currency)
+                ? market.price_change_percentage_7d_in_currency
+                : null;
             return (
               <InsightCard
                 key={asset.id}
@@ -427,7 +431,9 @@ function InsightCard({
             {trend > 0 ? "+" : ""}
             {trend.toFixed(2)}%
           </>
-        ) : "7-day change unavailable"}
+        ) : (
+          "7-day change unavailable"
+        )}
       </div>
       <div className="mt-3 h-16">
         <ResponsiveContainer width="100%" height="100%">
