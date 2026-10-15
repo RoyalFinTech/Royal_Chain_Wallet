@@ -101,3 +101,14 @@
 - Found a status mismatch: the function rejected any input status except `confirmed`, but its INSERT persisted the transaction as `pending` and left `confirmed_at` null. That contradicted the verified-only ledger-posting contract.
 - Corrected the proposed INSERT to persist `confirmed` and set `confirmed_at = now()`. This is a source-only migration change on `security/tx-hardening-2026-10-14`; it has **not** been run against the live Supabase project.
 - Next verification gate: run SQL/static checks and database integration tests against a disposable database with migrations 1–10 recovered. Do not apply migration 11 to production until the missing migration sources and live grants/RLS/functions are reconciled.
+
+
+## 2026-10-15 — Recovery challenge, responsive dashboard, and country calling codes
+
+- Replaced fixed recovery-word positions (3, 6, 9) with six unique positions selected using Web Crypto Fisher–Yates shuffling whenever a new 12-word phrase is generated. Added unit coverage for challenge size, uniqueness, bounds, and invalid input. The full mnemonic remains locally handled.
+- Expanded the authenticated app shell and bottom navigation beyond the mobile-only max-width so dashboard layouts can use desktop space. Increased responsive asset/action/market card columns at larger breakpoints.
+- Replaced hardcoded illustrative BTC/SOL price points and fixed percentage changes with live CoinGecko market quotes and seven-day sparklines, refreshed every 60 seconds. The dashboard shows an unavailable state if the live endpoint cannot be reached; it no longer invents price movements.
+- Added a global country calling-code registry sourced from annexare/Countries (MIT), with flag emoji generated from ISO country codes, and updated the phone login selector to show each country and calling code.
+- Official RoyalShane Wallet artwork could not be reliably located in public search. The current self-hosted SVG is still the existing project logo and must not be represented as the user's official logo. Await the owner's official logo upload before replacing brand assets.
+- The uploaded RPC file contains empty assignments; endpoints and key-like strings appear only in comments, and some required values (including Base RPC and a confirmed service-role key) are not supplied as active assignments. No Render environment variables were changed, to avoid deploying uncertain/example credentials or overwriting existing service configuration. Confirm the intended Render workspace and provide/confirm the real values privately before updating it.
+- Latest source changes are committed to this draft PR branch only. CI and browser-based smoke tests have not yet been verified for this new head.
