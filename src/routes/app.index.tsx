@@ -102,7 +102,7 @@ function Dashboard() {
   const loadingInsights = useSimulatedLoading(800);
 
   return (
-    <div className="px-5 pt-10">
+    <div className="mx-auto w-full px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       {/* Top bar */}
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
         <div className="flex min-w-0 items-center gap-3">
@@ -164,7 +164,7 @@ function Dashboard() {
             Token details
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
           {(
             [
               { symbol: "BTC", chain: "bitcoin", name: "Bitcoin" },
@@ -235,7 +235,7 @@ function Dashboard() {
             See all
           </Link>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           {quickActions.map(({ to, label, icon: Icon, color }) => (
             <Link
               key={label}
@@ -261,7 +261,7 @@ function Dashboard() {
         </p>
         {loadingInsights ? (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <InsightCardSkeleton />
               <InsightCardSkeleton />
             </div>
@@ -271,7 +271,7 @@ function Dashboard() {
           </>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <InsightCard
                 title="Bitcoin (BTC)"
                 total={64200}
