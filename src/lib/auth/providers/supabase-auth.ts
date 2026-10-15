@@ -73,8 +73,27 @@ export const supabaseAuthenticationService: AuthenticationService = {
     if (error) throw mapSupabaseError(error);
     if (!data.user) throw new AppError("unknown_error", "Sign-up did not return a user.");
     logSecurityEvent("auth.sign_up", data.user.id);
-    // If email confirmation is required, data.session is null until the user
-    // clicks the verification link — that's expected, not an error.
+
+    // With email confirmation enabled there is no authenticated session yet,
+    // so RLS correctly prevents this browser from reading the profile row.
+    // Migration 00000000000005 creates it via an auth.users trigger; return
+    // the matching provisional shape until sign-in can read the real row.
+    if (!data.session) {
+      const now = new Date().toISOString();
+      return {
+        id: data.user.id,
+        auth_user_id: data.user.id,
+        email: data.user.email ?? email,
+        phone: null,
+        display_name: null,
+        preferred_currency: "USD",
+        preferred_locale: "en",
+        kyc_status: "none" as const,
+        created_at: data.user.created_at ?? now,
+        updated_at: data.user.updated_at ?? now,
+      };
+    }
+
     return ensureProfile(data.user.id, data.user.email ?? email);
   },
 

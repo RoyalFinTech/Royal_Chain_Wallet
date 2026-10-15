@@ -40,7 +40,7 @@ async function initWalletKit() {
       name: "Royal Chain Wallet",
       description: "Non-custodial multi-chain wallet by Royal FinTech Company",
       url: typeof window !== "undefined" ? window.location.origin : "https://royalchainwallet.com",
-      icons: ["/icon-512.png"],
+      icons: ["/royal-chain-wallet-logo.svg"],
     },
   });
 }

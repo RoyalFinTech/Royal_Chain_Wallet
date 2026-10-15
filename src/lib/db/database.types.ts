@@ -433,6 +433,10 @@ export interface Database {
     };
     Views: { [_ in never]: never };
     Functions: {
+      create_wallet_with_accounts: {
+        Args: { p_label: string; p_accounts: Json };
+        Returns: Database["public"]["Tables"]["wallets"]["Row"];
+      };
       check_rate_limit: {
         Args: { p_bucket_key: string; p_max_requests: number; p_window_seconds: number };
         Returns: boolean;

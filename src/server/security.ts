@@ -13,7 +13,7 @@ export const listSessions = createServerFn({ method: "GET" })
     const { data, error } = await context.db
       .from("sessions")
       .select("*")
-      .eq("user_id", context.userId)
+      .eq("user_id", context.profileId)
       .is("revoked_at", null)
       .order("last_activity_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -28,7 +28,7 @@ export const revokeSession = createServerFn({ method: "POST" })
       .from("sessions")
       .update({ revoked_at: new Date().toISOString() })
       .eq("id", input.sessionId)
-      .eq("user_id", context.userId);
+      .eq("user_id", context.profileId);
     if (error) throw new Error(error.message);
     return { revoked: true };
   });
@@ -39,7 +39,7 @@ export const listDevices = createServerFn({ method: "GET" })
     const { data, error } = await context.db
       .from("devices")
       .select("*")
-      .eq("user_id", context.userId);
+      .eq("user_id", context.profileId);
     if (error) throw new Error(error.message);
     return data;
   });
@@ -52,7 +52,7 @@ export const removeDevice = createServerFn({ method: "POST" })
       .from("devices")
       .delete()
       .eq("id", input.deviceId)
-      .eq("user_id", context.userId);
+      .eq("user_id", context.profileId);
     if (error) throw new Error(error.message);
     return { removed: true };
   });

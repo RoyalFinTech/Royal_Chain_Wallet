@@ -21,7 +21,7 @@ export function Logo({
       />
       {withText && (
         <span className="font-display text-lg font-bold tracking-tight">
-          <span className="text-gold">Royal</span>Chain
+          <span className="text-gold">Royal</span> Chain Wallet
         </span>
       )}
     </div>

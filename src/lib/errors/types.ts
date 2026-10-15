@@ -53,7 +53,7 @@ export class InvalidPinError extends AppError {
 
 export class NotConfiguredError extends AppError {
   constructor(feature: string) {
-    super("not_configured", `${feature} is not yet configured. Running on mock data.`);
+    super("not_configured", `${feature} is not configured yet. This operation is disabled.`);
     this.name = "NotConfiguredError";
   }
 }

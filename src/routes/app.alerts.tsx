@@ -1,189 +1,126 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import {
   ArrowLeft,
   ArrowDownToLine,
   ArrowUpFromLine,
+  ExternalLink,
   ShieldAlert,
-  TrendingUp,
-  TrendingDown,
-  Settings,
-  CheckCheck,
 } from "lucide-react";
 import { useStoredWallet, useTransactionHistory } from "@/hooks/use-wallet";
-import { ASSET_CATALOG } from "@/lib/services";
 
 export const Route = createFileRoute("/app/alerts")({
   component: AlertsPage,
 });
 
-type AlertKind = "tx" | "price" | "security";
-
-interface AlertItem {
-  id: string;
-  kind: AlertKind;
-  title: string;
-  detail: string;
-  timestamp: number;
-  read: boolean;
-}
-
-function priceAlerts(seedKey: string): AlertItem[] {
-  let h = 0;
-  for (let i = 0; i < seedKey.length; i++) h = (h * 31 + seedKey.charCodeAt(i)) >>> 0;
-  const symbols = ["BTC", "ETH", "SOL", "ROY"] as const;
-  const now = Date.now();
-  return symbols.map((s, i) => {
-    const up = (h >> i) % 2 === 0;
-    const pct = 4 + ((h >> (i + 3)) % 12);
-    return {
-      id: `price_${s}_${i}`,
-      kind: "price" as const,
-      title: `${ASSET_CATALOG[s].name} ${up ? "up" : "down"} ${pct}%`,
-      detail: `${s} moved ${up ? "+" : "-"}${pct}% in the last 24 hours.`,
-      timestamp: now - i * 6 * 3_600_000,
-      read: i > 0,
-    };
-  });
-}
-
-const SECURITY_ALERTS: AlertItem[] = [
-  {
-    id: "sec_1",
-    kind: "security",
-    title: "New device signed in",
-    detail: "MacBook Pro · Serrekunda, GM",
-    timestamp: Date.now() - 2 * 3_600_000,
-    read: false,
-  },
-  {
-    id: "sec_2",
-    kind: "security",
-    title: "PIN changed",
-    detail: "Your wallet PIN was updated successfully.",
-    timestamp: Date.now() - 26 * 3_600_000,
-    read: true,
-  },
-];
-
 function AlertsPage() {
   const navigate = useNavigate();
   const wallet = useStoredWallet();
   const history = useTransactionHistory(wallet);
-  const [filter, setFilter] = useState<"all" | AlertKind>("all");
 
-  const txAlerts: AlertItem[] = useMemo(
-    () =>
-      (history.data ?? []).slice(0, 8).map((tx) => ({
-        id: tx.id,
-        kind: "tx" as const,
-        title: `${tx.direction === "in" ? "Received" : "Sent"} ${tx.amount} ${tx.symbol}`,
-        detail: `${tx.direction === "in" ? "From" : "To"} ${tx.counterparty} · ${tx.status}`,
-        timestamp: tx.timestamp,
-        read: tx.status === "confirmed",
-      })),
+  const items = useMemo(
+    () => (history.data ?? []).slice(0, 20).sort((a, b) => b.timestamp - a.timestamp),
     [history.data],
   );
-
-  const priceItems = useMemo(
-    () => priceAlerts(wallet?.addresses.solana.address ?? "guest"),
-    [wallet],
-  );
-
-  const all = [...txAlerts, ...priceItems, ...SECURITY_ALERTS].sort(
-    (a, b) => b.timestamp - a.timestamp,
-  );
-  const filtered = filter === "all" ? all : all.filter((a) => a.kind === filter);
-  const unreadCount = all.filter((a) => !a.read).length;
 
   return (
     <div className="mx-auto min-h-dvh max-w-md pb-14">
       <header className="flex items-center gap-3 px-5 pt-10">
         <button
+          type="button"
           onClick={() => navigate({ to: "/app" })}
+          aria-label="Back to dashboard"
           className="grid h-10 w-10 place-items-center rounded-full glass"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-xl font-bold">Notifications</h1>
-          {unreadCount > 0 && (
-            <p className="text-[11px] text-muted-foreground">{unreadCount} unread</p>
-          )}
+          <h1 className="font-display text-xl font-bold">Wallet Activity</h1>
+          <p className="text-[11px] text-muted-foreground">Recorded transaction events only</p>
         </div>
-        <Link
-          to="/app/notifications"
-          aria-label="Notification settings"
-          className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
-        >
-          <Settings className="h-4 w-4" />
+        <Link to="/app/notifications" className="text-xs font-semibold text-gold hover:underline">
+          Preferences
         </Link>
       </header>
 
-      <div className="no-scrollbar mt-5 flex gap-2 overflow-x-auto px-5">
-        {(["all", "tx", "price", "security"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold capitalize ${filter === f ? "border-gold bg-gold/10 text-gold" : "border-border bg-card text-muted-foreground"}`}
-          >
-            {f === "tx" ? "Transactions" : f}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-4 px-5">
-        {filtered.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
-            <CheckCheck className="mx-auto h-6 w-6 text-muted-foreground" />
-            <p className="mt-2 text-sm font-semibold">You're all caught up</p>
-            <p className="mt-1 text-xs text-muted-foreground">No notifications in this category.</p>
+      <div className="mt-5 px-5">
+        {!wallet ? (
+          <div className="rounded-3xl border border-dashed border-border bg-card p-7 text-center">
+            <ShieldAlert className="mx-auto h-7 w-7 text-gold" />
+            <h2 className="mt-3 font-display text-lg font-bold">No wallet activity</h2>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              Create or import a wallet to begin. This page does not fabricate device alerts,
+              logins, or transactions.
+            </p>
+            <Link
+              to="/create-wallet"
+              className="mt-4 grid h-11 place-items-center rounded-xl gradient-gold text-sm font-semibold text-navy"
+            >
+              Create wallet
+            </Link>
+          </div>
+        ) : history.isLoading ? (
+          <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
+            Loading transaction activity…
+          </div>
+        ) : history.isError ? (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">
+            Could not load transaction activity. Refresh and try again.
+          </div>
+        ) : items.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-border bg-card p-7 text-center">
+            <ShieldAlert className="mx-auto h-7 w-7 text-gold" />
+            <h2 className="mt-3 font-display text-lg font-bold">You're all caught up</h2>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              No transaction records are available in this browser session. Live price alerts, push
+              notifications, and security-event ingestion are not connected.
+            </p>
+            <Link
+              to="/app/receive"
+              className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-gold hover:underline"
+            >
+              Receive crypto <ExternalLink className="h-3 w-3" />
+            </Link>
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map((a) => (
-              <AlertRow key={a.id} alert={a} />
+            {items.map((tx) => (
+              <div
+                key={tx.id}
+                className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4"
+              >
+                <span
+                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${tx.direction === "in" ? "bg-success/10 text-success" : "bg-gold/10 text-gold"}`}
+                >
+                  {tx.direction === "in" ? (
+                    <ArrowDownToLine className="h-4 w-4" />
+                  ) : (
+                    <ArrowUpFromLine className="h-4 w-4" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">
+                    {tx.direction === "in" ? "Received" : "Sent"} {tx.amount} {tx.symbol}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                    {tx.chain} · {new Date(tx.timestamp).toLocaleString()}
+                  </p>
+                  <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">
+                    {tx.hash}
+                  </p>
+                  <p className="mt-1 text-[10px] capitalize text-muted-foreground">{tx.status}</p>
+                </div>
+                <Link
+                  to="/app/transactions"
+                  aria-label="View transaction details"
+                  className="mt-1 text-gold"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Link>
+              </div>
             ))}
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function AlertRow({ alert }: { alert: AlertItem }) {
-  const ICONS: Record<AlertKind, typeof ArrowDownToLine> = {
-    tx: alert.title.startsWith("Received") ? ArrowDownToLine : ArrowUpFromLine,
-    price: alert.title.includes("up") ? TrendingUp : TrendingDown,
-    security: ShieldAlert,
-  };
-  const COLORS: Record<AlertKind, string> = {
-    tx: "bg-emerald-500/10 text-emerald-600",
-    price: alert.title.includes("up")
-      ? "bg-success/10 text-success"
-      : "bg-destructive/10 text-destructive",
-    security: "bg-amber-500/10 text-amber-600",
-  };
-  const Icon = ICONS[alert.kind];
-  return (
-    <div
-      className={`flex items-start gap-3 rounded-2xl border p-4 ${alert.read ? "border-border bg-card" : "border-gold/30 bg-gold/5"}`}
-    >
-      <span
-        className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${COLORS[alert.kind]}`}
-      >
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">{alert.title}</p>
-        <p className="text-xs text-muted-foreground">{alert.detail}</p>
-      </div>
-      <div className="shrink-0 text-right">
-        {!alert.read && <span className="mb-1 inline-block h-2 w-2 rounded-full bg-gold" />}
-        <p className="text-[10px] text-muted-foreground">
-          {new Date(alert.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </p>
       </div>
     </div>
   );

@@ -1,28 +1,19 @@
 /**
- * Solana chain service.
- *
- * Live when VITE_SOL_RPC_URL is set (real getBalance/getTokenAccountsByOwner
- * JSON-RPC calls — see rpc/solana-rpc.ts); falls back to deterministic mock
- * data otherwise so the app never crashes on an unconfigured environment.
- * Address handling uses lightweight bs58/tweetnacl (Cloudflare Workers /
- * edge-runtime safe) — intentionally not @solana/web3.js's Connection
- * class, which pulls in a Node-only websocket dependency that breaks edge
- * SSR builds (hit and fixed earlier in this project).
- *
- * Pricing (usdPrice/change24hPct) is still mock-derived even when the
- * balance is live — a live price feed is a separate integration
- * (VITE_PRICE_PROVIDER_URL, see lib/config/currency-preference.ts)
- * outside this phase's scope.
+ * Solana chain service. Live balances require the configured Solana RPC.
+ * Address handling uses browser/edge-compatible libraries. Price metadata
+ * remains an illustrative estimate until a live market feed is connected.
  */
 import bs58 from "bs58";
-import { mockBalance, mockNetworkStatus } from "./mockData";
+import { sampleMarketData, mockNetworkStatus } from "./mockData";
 import type { AssetBalance, NetworkStatus } from "./types";
 import { isChainLive, chainEndpoint } from "@/lib/config/chains";
 import { getSolBalance, getSlot, getHealth, requireRpcUrl } from "./rpc/solana-rpc";
 
 export async function getBalance(address: string): Promise<AssetBalance> {
-  const priced = mockBalance(address, "SOL"); // price/change still mock — see file header
-  if (!isChainLive("solana")) return priced;
+  const priced = sampleMarketData("SOL");
+  if (!isChainLive("solana")) {
+    return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
+  }
 
   const rpcUrl = requireRpcUrl(chainEndpoint("solana"), "Solana");
   const { sol } = await getSolBalance(rpcUrl, address);

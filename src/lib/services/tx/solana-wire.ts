@@ -15,6 +15,7 @@
  * against a live Solana network or devnet from this environment (no
  * network access here) — test on devnet before any mainnet use.
  */
+import { Buffer } from "buffer";
 import bs58 from "bs58";
 import nacl from "tweetnacl";
 

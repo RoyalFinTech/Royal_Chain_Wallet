@@ -1,199 +1,253 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader } from "./app.wallet";
-import { MOCK_TRANSACTIONS, type Transaction } from "@/lib/mock-data";
-import { TransactionCard } from "@/components/wallet/TransactionCard";
-import { Search, SlidersHorizontal, Download, CalendarRange } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { TransactionDetailsSheet } from "@/components/wallet/TransactionDetailsSheet";
-import { DEMO_IDENTITY } from "@/lib/wallet-identity";
-import { makeHash, makeReceiptNo, type ReceiptData } from "@/lib/receipts";
-import { TransactionListSkeleton } from "@/components/ui/skeletons";
-import { useSimulatedLoading } from "@/hooks/use-simulated-loading";
+import {
+  Download,
+  Search,
+  ArrowLeft,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ExternalLink,
+  Wallet,
+} from "lucide-react";
+import { useStoredWallet, useTransactionHistory } from "@/hooks/use-wallet";
+import type { TxRecord, TxStatus } from "@/lib/services/types";
 
 export const Route = createFileRoute("/app/transactions")({
   component: TxHistory,
 });
 
-const tabs = ["All", "Sent", "Received", "Deposits", "Withdrawals", "QR", "Exchange"] as const;
-const statuses = ["All", "Completed", "Pending", "Failed"] as const;
-const ranges = ["Today", "7 days", "30 days", "Custom"] as const;
-type Tab = (typeof tabs)[number];
-type Status = (typeof statuses)[number];
-type Range = (typeof ranges)[number];
-
-const typeFilter = (t: Tab) => (tx: Transaction) => {
-  if (t === "All") return true;
-  if (t === "Sent") return tx.type === "sent";
-  if (t === "Received") return tx.type === "received";
-  if (t === "Deposits") return tx.type === "deposit";
-  if (t === "Withdrawals") return tx.type === "withdraw";
-  if (t === "QR") return tx.type === "bill" || tx.type === "airtime";
-  return false; // Exchange (no mock yet)
-};
-
-function toReceipt(tx: Transaction): ReceiptData {
-  const isIn = tx.amount > 0;
-  return {
-    receiptNo: makeReceiptNo(parseInt(tx.id.replace(/\D/g, "") || "0", 10) * 137 + 100000),
-    txId: `TX-${tx.id.toUpperCase()}-${tx.date.replace(/\W/g, "")}`,
-    hash: makeHash(),
-    method:
-      tx.type === "bill"
-        ? "QR Payment"
-        : tx.type === "deposit"
-          ? "Bank / Mobile Money"
-          : "Wallet Transfer",
-    status: tx.status,
-    amount: tx.amount,
-    fee: Math.max(0.5, +(Math.abs(tx.amount) * 0.004).toFixed(2)),
-    currency: "USD",
-    sender: isIn
-      ? { name: tx.title, walletId: "RCW-XXXX-1029" }
-      : {
-          name: "Fatoumata Njie",
-          walletId: DEMO_IDENTITY.walletId,
-          address: DEMO_IDENTITY.address,
-        },
-    receiver: isIn
-      ? { name: "Fatoumata Njie", walletId: DEMO_IDENTITY.walletId, address: DEMO_IDENTITY.address }
-      : { name: tx.title, walletId: "RCW-XXXX-9182" },
-    date: new Date().toISOString(),
-    note: tx.subtitle,
-  };
-}
+type DirectionFilter = "all" | "out" | "in";
+type StatusFilter = "all" | TxStatus;
 
 function TxHistory() {
-  const [tab, setTab] = useState<Tab>("All");
-  const [status, setStatus] = useState<Status>("All");
-  const [range, setRange] = useState<Range>("30 days");
-  const [q, setQ] = useState("");
-  const [openFilters, setOpenFilters] = useState(false);
-  const [selected, setSelected] = useState<ReceiptData | null>(null);
-  const loading = useSimulatedLoading(700, [tab, status, range, q]);
+  const wallet = useStoredWallet();
+  const query = useTransactionHistory(wallet);
+  const [direction, setDirection] = useState<DirectionFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [search, setSearch] = useState("");
 
-  const list = useMemo(
-    () =>
-      MOCK_TRANSACTIONS.filter(typeFilter(tab))
-        .filter((t) => (status === "All" ? true : t.status === status.toLowerCase()))
-        .filter((t) => (t.title + t.subtitle).toLowerCase().includes(q.toLowerCase())),
-    [tab, status, q],
-  );
+  const records = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (query.data ?? [])
+      .filter((tx) => direction === "all" || tx.direction === direction)
+      .filter((tx) => status === "all" || tx.status === status)
+      .filter(
+        (tx) =>
+          !q || `${tx.symbol} ${tx.hash} ${tx.counterparty} ${tx.chain}`.toLowerCase().includes(q),
+      )
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }, [query.data, direction, status, search]);
+
+  const exportCsv = () => {
+    if (records.length === 0) return;
+    const escapeCsv = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+    const rows = [
+      [
+        "timestamp",
+        "chain",
+        "asset",
+        "direction",
+        "amount",
+        "status",
+        "counterparty",
+        "transaction_hash",
+      ],
+      ...records.map((tx) => [
+        new Date(tx.timestamp).toISOString(),
+        tx.chain,
+        tx.symbol,
+        tx.direction,
+        tx.amount,
+        tx.status,
+        tx.counterparty,
+        tx.hash,
+      ]),
+    ];
+    const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "royal-chain-wallet-transactions.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  if (!wallet) {
+    return (
+      <div className="px-5 pb-10 pt-10">
+        <h1 className="font-display text-2xl font-bold">Transaction Activity</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Create or import a wallet before tracking transaction activity.
+        </p>
+        <Link
+          to="/create-wallet"
+          className="mt-5 grid h-12 place-items-center rounded-xl gradient-gold text-sm font-semibold text-navy"
+        >
+          Create a wallet
+        </Link>
+        <Link
+          to="/import-wallet"
+          className="mt-2 grid h-12 place-items-center rounded-xl border border-border bg-card text-sm font-semibold"
+        >
+          Import a wallet
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="px-5 pt-10">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-        <PageHeader title="Transactions" subtitle="All wallet activity in one place" />
+    <div className="px-5 pb-10 pt-10">
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold">Transaction Activity</h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Real transaction hashes recorded by this app session.
+          </p>
+        </div>
         <button
-          className="mt-1 grid h-10 w-10 shrink-0 place-items-center rounded-full glass"
-          title="Export"
+          type="button"
+          onClick={exportCsv}
+          disabled={records.length === 0}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border bg-card disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Export transactions as CSV"
+          title={
+            records.length ? "Export visible transactions as CSV" : "No transactions to export"
+          }
         >
           <Download className="h-4 w-4" />
         </button>
+      </header>
+
+      <div className="mt-5 flex items-center gap-2 rounded-2xl border border-border bg-input/40 px-3">
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search asset, chain, address, or hash"
+          className="w-full bg-transparent py-3 text-sm focus:outline-none"
+        />
       </div>
 
-      <div className="mt-5 flex gap-2">
-        <div className="flex flex-1 items-center gap-2 rounded-2xl border border-border bg-input/40 px-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name, note or reference"
-            className="w-full bg-transparent py-3 text-sm focus:outline-none"
-          />
-        </div>
-        <button
-          onClick={() => setOpenFilters((o) => !o)}
-          className={`grid h-12 w-12 place-items-center rounded-2xl border border-border ${openFilters ? "gradient-gold text-navy" : "bg-card"}`}
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar">
-        {tabs.map((t) => (
+      <div className="mt-4 flex gap-2">
+        {(
+          [
+            ["all", "All"],
+            ["out", "Sent"],
+            ["in", "Received"],
+          ] as const
+        ).map(([value, label]) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition ${
-              tab === t
-                ? "gradient-gold text-navy shadow-glow"
-                : "border border-border bg-card text-muted-foreground"
-            }`}
+            key={value}
+            type="button"
+            onClick={() => setDirection(value)}
+            aria-pressed={direction === value}
+            className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${direction === value ? "border-gold bg-gold/10 text-gold" : "border-border bg-card"}`}
           >
-            {t}
+            {label}
           </button>
         ))}
+        <select
+          value={status}
+          onChange={(event) => setStatus(event.target.value as StatusFilter)}
+          className="ml-auto max-w-32 rounded-full border border-border bg-card px-3 py-2 text-xs"
+          aria-label="Filter by transaction status"
+        >
+          <option value="all">All statuses</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="pending">Pending</option>
+          <option value="failed">Failed</option>
+        </select>
       </div>
-
-      {openFilters && (
-        <div className="mt-3 space-y-3 rounded-2xl border border-border bg-card p-3 animate-fade-in">
-          <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Status
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {statuses.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStatus(s)}
-                  className={`rounded-full px-3 py-1 text-[11px] font-medium ${
-                    status === s
-                      ? "bg-foreground text-background"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Date range
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {ranges.map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setRange(r)}
-                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-medium ${
-                    range === r ? "bg-gold text-navy" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {r === "Custom" && <CalendarRange className="h-3 w-3" />}
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="mt-5 space-y-2">
-        {loading ? (
-          <TransactionListSkeleton rows={6} />
-        ) : list.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground animate-fade-in">
-            No transactions found.
-          </p>
-        ) : (
-          list.map((tx, i) => (
-            <button
-              key={tx.id}
-              onClick={() => setSelected(toReceipt(tx))}
-              className="press block w-full text-left animate-fade-in"
-              style={{
-                animationDelay: `${Math.min(i * 40, 240)}ms`,
-                animationFillMode: "backwards",
-              }}
+        {query.isLoading ? (
+          <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
+            Loading transaction activity…
+          </div>
+        ) : query.isError ? (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">
+            Transaction activity could not be loaded. Refresh and try again.
+          </div>
+        ) : records.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-border bg-card p-7 text-center">
+            <Wallet className="mx-auto h-8 w-8 text-gold" />
+            <h2 className="mt-3 font-display text-lg font-bold">No matching transactions</h2>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              Historical on-chain activity requires a transaction indexer. This screen will not
+              fabricate receipts, hashes, or deposits.
+            </p>
+            <Link
+              to="/app/receive"
+              className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-gold hover:underline"
             >
-              <TransactionCard tx={tx} />
-            </button>
-          ))
+              Receive crypto <ExternalLink className="h-3 w-3" />
+            </Link>
+          </div>
+        ) : (
+          records.map((tx) => <TransactionRow key={tx.id} tx={tx} />)
         )}
       </div>
+    </div>
+  );
+}
 
-      <TransactionDetailsSheet data={selected} onClose={() => setSelected(null)} />
+function TransactionRow({ tx }: { tx: TxRecord }) {
+  const explorer =
+    tx.chain === "bitcoin"
+      ? `https://mempool.space/tx/${tx.hash}`
+      : tx.chain === "ethereum"
+        ? `https://etherscan.io/tx/${tx.hash}`
+        : tx.chain === "bnb"
+          ? `https://bscscan.com/tx/${tx.hash}`
+          : `https://solscan.io/tx/${tx.hash}`;
+
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4">
+      <span
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${tx.direction === "in" ? "bg-success/10 text-success" : "bg-gold/10 text-gold"}`}
+      >
+        {tx.direction === "in" ? (
+          <ArrowDownLeft className="h-5 w-5" />
+        ) : (
+          <ArrowUpRight className="h-5 w-5" />
+        )}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold">
+              {tx.direction === "in" ? "Received" : "Sent"} {tx.symbol}
+            </p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">
+              {tx.chain} · {new Date(tx.timestamp).toLocaleString()}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-display text-sm font-bold">
+              {tx.direction === "in" ? "+" : "−"}
+              {tx.amount} {tx.symbol}
+            </p>
+            <p
+              className={`mt-1 text-[10px] font-semibold ${tx.status === "confirmed" ? "text-success" : tx.status === "failed" ? "text-destructive" : "text-amber-600"}`}
+            >
+              {tx.status}
+            </p>
+          </div>
+        </div>
+        <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">{tx.hash}</p>
+        {tx.hash && (
+          <a
+            href={explorer}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-gold hover:underline"
+          >
+            View on explorer <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+      </div>
     </div>
   );
 }

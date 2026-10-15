@@ -1,19 +1,18 @@
 /**
- * BNB Chain (BSC) service.
- *
- * EVM-compatible: shares address format and validation with Ethereum.
- * Live when VITE_BNB_RPC_URL is set (real eth_getBalance via ethers.js —
- * see rpc/evm-rpc.ts); falls back to deterministic mock data otherwise.
+ * BNB Chain service. Balance reads require the configured EVM RPC.
+ * Price metadata is an illustrative estimate until a live market feed exists.
  */
 import { isAddress } from "ethers";
-import { mockBalance, mockNetworkStatus } from "./mockData";
+import { sampleMarketData, mockNetworkStatus } from "./mockData";
 import type { AssetBalance, NetworkStatus } from "./types";
 import { isChainLive, chainEndpoint } from "@/lib/config/chains";
 import { getEvmBalance, getEvmBlockNumber, getEvmHealth, requireRpcUrl } from "./rpc/evm-rpc";
 
 export async function getBalance(address: string): Promise<AssetBalance> {
-  const priced = mockBalance(address, "BNB");
-  if (!isChainLive("bnb")) return priced;
+  const priced = sampleMarketData("BNB");
+  if (!isChainLive("bnb")) {
+    return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
+  }
 
   const rpcUrl = requireRpcUrl(chainEndpoint("bnb"), "BNB Chain");
   const { ether } = await getEvmBalance(rpcUrl, address);

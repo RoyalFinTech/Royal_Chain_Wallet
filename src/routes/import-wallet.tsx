@@ -21,14 +21,16 @@ import { SecurityWarning } from "@/components/wallet/SecurityWarning";
 import { WalletSuccessCard } from "@/components/wallet/WalletSuccessCard";
 import { COUNTRIES } from "@/lib/mock-data";
 import { CURRENCY_LIST, type CurrencyCode } from "@/lib/currencies";
-import { generateWalletIdentity, type RoyalWalletIdentity } from "@/lib/wallet-identity";
+import type { RoyalWalletIdentity } from "@/lib/wallet-identity";
+import type { DerivedAddresses } from "@/lib/wallet/derive";
 
 export const Route = createFileRoute("/import-wallet")({
   component: ImportWallet,
 });
 
+type ImportedWalletIdentity = RoyalWalletIdentity & { addresses: DerivedAddresses };
 type Method = "phrase" | "backup" | "key";
-type Step = "choose" | "input" | "restoring" | "success" | "profile" | "done";
+type Step = "choose" | "input" | "restoring" | "security" | "success" | "profile" | "done";
 
 const SESSION_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -49,9 +51,11 @@ function ImportWallet() {
   // Private key state
   const [privateKey, setPrivateKey] = useState("");
   const [ackRisk, setAckRisk] = useState(false);
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
 
   const [error, setError] = useState<string | null>(null);
-  const [identity, setIdentity] = useState<RoyalWalletIdentity | null>(null);
+  const [identity, setIdentity] = useState<ImportedWalletIdentity | null>(null);
 
   // Session timeout — reset flow if idle too long while handling secrets.
   useEffect(() => {
@@ -60,6 +64,9 @@ function ImportWallet() {
       setWords(Array(24).fill(""));
       setBackupPass("");
       setPrivateKey("");
+      setPin("");
+      setConfirmPin("");
+      setIdentity(null);
       setStep("choose");
       setError("Session timed out for your security. Please start again.");
     }, SESSION_TIMEOUT_MS);
@@ -74,6 +81,12 @@ function ImportWallet() {
   }, [step, method]);
 
   const startImport = (m: Method) => {
+    if (m !== "phrase") {
+      setError(
+        "This import method is not available yet. Restore using a valid BIP-39 recovery phrase.",
+      );
+      return;
+    }
     setMethod(m);
     setError(null);
     setStep("input");
@@ -86,8 +99,8 @@ function ImportWallet() {
       // require every slot to have a word.
       return active.every((w) => w.trim() !== "");
     }
-    if (method === "backup") return !!backupFile && backupPass.length >= 6;
-    if (method === "key") return privateKey.trim().length >= 32 && ackRisk;
+    // Backup/private-key restoration is intentionally disabled until real,
+    // verifiable parsers are implemented. Never simulate a successful import.
     return false;
   })();
 
@@ -95,38 +108,67 @@ function ImportWallet() {
     setError(null);
     setStep("restoring");
 
-    if (method === "phrase") {
-      try {
-        const { importWallet } = await import("@/lib/wallet");
-        // Phase-1 default PIN. The Security screen will let users change this
-        // and re-encrypt with a personal PIN.
-        const stored = await importWallet(words.slice(0, phraseLength).join(" "), "royal-chain");
-        const addr = stored.addresses.solana.address;
-        setIdentity({
-          walletId: `RCW-${addr.slice(-8, -4).toUpperCase()}-${addr.slice(-4).toUpperCase()}`,
-          address: addr,
-          recoveryPhrase: words.slice(0, phraseLength),
-          createdAt: stored.createdAt,
-        });
-        setStep("success");
-        return;
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not restore wallet.");
-        setStep("input");
-        return;
-      }
-    }
-
-    // Legacy backup/private-key flows: still mocked until phase 2.
-    await new Promise((r) => setTimeout(r, 1400));
-    if (method === "backup" && backupPass === "wrong") {
-      setError("Incorrect backup password. Please try again.");
+    if (method !== "phrase") {
+      setError("This import method is not available yet. No wallet was restored.");
       setStep("input");
       return;
     }
-    setIdentity(generateWalletIdentity());
-    setStep("success");
+
+    try {
+      const phrase = words.slice(0, phraseLength).join(" ");
+      const { validateMnemonic } = await import("@/lib/wallet");
+      if (!validateMnemonic(phrase)) {
+        throw new Error("Recovery phrase is invalid. Check the word list and checksum.");
+      }
+      const { deriveAllChains } = await import("@/lib/wallet/derive");
+      const addresses = await deriveAllChains(phrase);
+      const addr = addresses.solana.address;
+      // Keep only public preview data until the user chooses a personal PIN.
+      setIdentity({
+        walletId: `RCW-${addr.slice(-8, -4).toUpperCase()}-${addr.slice(-4).toUpperCase()}`,
+        address: addr,
+        recoveryPhrase: [],
+        createdAt: new Date().toISOString(),
+        addresses,
+      });
+      setPin("");
+      setConfirmPin("");
+      setStep("security");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not validate recovery phrase.");
+      setStep("input");
+    }
   };
+
+  const pinOk = /^\d{6}$/.test(pin) && pin === confirmPin;
+
+  async function securePhraseRestore() {
+    if (method !== "phrase" || !pinOk) return;
+    setError(null);
+    setStep("restoring");
+    try {
+      const { importWallet } = await import("@/lib/wallet");
+      const stored = await importWallet(words.slice(0, phraseLength).join(" "), pin);
+      const addr = stored.addresses.solana.address;
+      setIdentity({
+        walletId: `RCW-${addr.slice(-8, -4).toUpperCase()}-${addr.slice(-4).toUpperCase()}`,
+        address: addr,
+        // Do not retain the recovery phrase in the success-screen component.
+        recoveryPhrase: [],
+        createdAt: stored.createdAt,
+        addresses: stored.addresses,
+      });
+      setWords(Array(24).fill(""));
+      setPin("");
+      setConfirmPin("");
+      setBackupPass("");
+      setPrivateKey("");
+      setStep("success");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not secure restored wallet.");
+      setStep("security");
+    }
+  }
 
   return (
     <main className="relative flex min-h-dvh flex-col bg-background">
@@ -199,6 +241,19 @@ function ImportWallet() {
 
           {step === "restoring" && <Restoring method={method} />}
 
+          {step === "security" && identity && (
+            <PinSetupPanel
+              address={identity.address}
+              pin={pin}
+              setPin={setPin}
+              confirmPin={confirmPin}
+              setConfirmPin={setConfirmPin}
+              pinOk={pinOk}
+              error={error}
+              onContinue={() => void securePhraseRestore()}
+            />
+          )}
+
           {step === "success" && identity && (
             <SuccessPanel identity={identity} onContinue={() => setStep("profile")} />
           )}
@@ -231,6 +286,7 @@ function ChooseMethod({ onPick, error }: { onPick: (m: Method) => void; error: s
     title: string;
     desc: string;
     tag?: string;
+    disabled?: boolean;
   }[] = [
     {
       id: "phrase",
@@ -244,15 +300,18 @@ function ChooseMethod({ onPick, error }: { onPick: (m: Method) => void; error: s
       icon: FileArchive,
       emoji: "📁",
       title: "Encrypted Wallet Backup",
-      desc: "Upload a .wallet, .json or .backup file.",
+      desc: "Not available yet — this version does not restore backup files.",
+      tag: "Coming soon",
+      disabled: true,
     },
     {
       id: "key",
       icon: ScanLine,
       emoji: "🔑",
       title: "Private Key Import",
-      desc: "Advanced users only.",
-      tag: "Advanced",
+      desc: "Not available yet — this version does not import private keys.",
+      tag: "Coming soon",
+      disabled: true,
     },
   ];
 
@@ -268,7 +327,8 @@ function ChooseMethod({ onPick, error }: { onPick: (m: Method) => void; error: s
           <button
             key={o.id}
             onClick={() => onPick(o.id)}
-            className="group flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-gold/50 hover:shadow-soft"
+            disabled={o.disabled}
+            className={`group flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left transition ${o.disabled ? "cursor-not-allowed opacity-60" : "hover:border-gold/50 hover:shadow-soft"}`}
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gold/10 text-xl">
               {o.emoji}
@@ -541,12 +601,12 @@ function SuccessPanel({
   identity,
   onContinue,
 }: {
-  identity: RoyalWalletIdentity;
+  identity: ImportedWalletIdentity;
   onContinue: () => void;
 }) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-      <WalletSuccessCard walletId={identity.walletId} address={identity.address} />
+      <WalletSuccessCard walletId={identity.walletId} addresses={identity.addresses} />
       <button
         onClick={onContinue}
         className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl gradient-gold font-semibold text-navy shadow-glow transition hover:scale-[1.01]"
@@ -655,5 +715,85 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div className="mt-1">{children}</div>
     </label>
+  );
+}
+
+function PinSetupPanel({
+  address,
+  pin,
+  setPin,
+  confirmPin,
+  setConfirmPin,
+  pinOk,
+  error,
+  onContinue,
+}: {
+  address: string;
+  pin: string;
+  setPin: (value: string) => void;
+  confirmPin: string;
+  setConfirmPin: (value: string) => void;
+  pinOk: boolean;
+  error: string | null;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
+      <div className="grid h-11 w-11 place-items-center rounded-2xl gradient-gold text-navy shadow-glow">
+        <ShieldCheck className="h-5 w-5" />
+      </div>
+      <h2 className="mt-3 font-display text-xl font-bold">Secure this restored wallet</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Your phrase has been validated. Choose a new 6-digit PIN before the wallet is saved on this
+        device.
+      </p>
+      <p className="mt-3 break-all rounded-xl bg-muted/40 p-3 font-mono text-xs text-muted-foreground">
+        Solana address: {address}
+      </p>
+      <label className="mt-4 block text-xs font-medium text-muted-foreground">
+        New 6-digit PIN
+        <input
+          type="password"
+          inputMode="numeric"
+          autoComplete="new-password"
+          maxLength={6}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          className="mt-1 h-12 w-full rounded-2xl border border-border bg-input/40 px-4 text-center font-mono tracking-[0.5em]"
+          placeholder="••••••"
+        />
+      </label>
+      <label className="mt-3 block text-xs font-medium text-muted-foreground">
+        Confirm PIN
+        <input
+          type="password"
+          inputMode="numeric"
+          autoComplete="new-password"
+          maxLength={6}
+          value={confirmPin}
+          onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          className="mt-1 h-12 w-full rounded-2xl border border-border bg-input/40 px-4 text-center font-mono tracking-[0.5em]"
+          placeholder="••••••"
+        />
+      </label>
+      {confirmPin.length === 6 && !pinOk && (
+        <p className="mt-2 text-xs text-destructive">
+          PINs must match and contain exactly six digits.
+        </p>
+      )}
+      {error && (
+        <div className="mt-3">
+          <SecurityWarning title={error} />
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onContinue}
+        disabled={!pinOk}
+        className="mt-5 grid h-14 w-full place-items-center rounded-2xl gradient-gold font-semibold text-navy shadow-glow disabled:opacity-50"
+      >
+        Encrypt & Restore Wallet
+      </button>
+    </div>
   );
 }

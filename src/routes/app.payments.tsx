@@ -1,111 +1,121 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "./app.wallet";
 import {
-  Receipt,
-  Smartphone,
-  Zap,
-  Droplet,
-  Tv,
-  Wifi,
-  GraduationCap,
+  ArrowDownToLine,
+  ArrowLeftRight,
+  Code2,
+  ExternalLink,
+  QrCode,
   ShieldCheck,
   Send,
-  Landmark,
-  QrCode,
-  Link2,
+  Wallet,
+  KeyRound,
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/payments")({
   component: Payments,
 });
 
-const bills = [
-  { name: "Electricity", icon: Zap, color: "text-amber-500 bg-amber-500/10" },
-  { name: "Water", icon: Droplet, color: "text-blue-500 bg-blue-500/10" },
-  { name: "Cable TV", icon: Tv, color: "text-purple-500 bg-purple-500/10" },
-  { name: "Internet", icon: Wifi, color: "text-teal-500 bg-teal-500/10" },
-  { name: "Education", icon: GraduationCap, color: "text-rose-500 bg-rose-500/10" },
-  { name: "Insurance", icon: ShieldCheck, color: "text-emerald-500 bg-emerald-500/10" },
-];
-
-const transfers = [
-  { to: "/send", name: "Send Money", icon: Send },
-  { to: "/qr", name: "QR Pay", icon: QrCode },
-  { to: "/deposit", name: "Bank Transfer", icon: Landmark },
-  { to: "/qr", name: "Daha Pay", icon: Link2 },
+const cryptoTools = [
+  {
+    to: "/send",
+    name: "Send Crypto",
+    description: "Review the recipient and network before signing.",
+    icon: Send,
+  },
+  {
+    to: "/app/receive",
+    name: "Receive Crypto",
+    description: "Show a real wallet-address QR code.",
+    icon: ArrowDownToLine,
+  },
+  {
+    to: "/qr",
+    name: "QR Tools",
+    description: "Copy, share, save, or scan wallet QR codes.",
+    icon: QrCode,
+  },
+  {
+    to: "/app/tokens",
+    name: "Token Balances",
+    description: "View tokens when the SPL reader is configured.",
+    icon: Wallet,
+  },
+  {
+    to: "/app/walletconnect",
+    name: "WalletConnect",
+    description: "Pair with supported dApps; transaction signing is restricted.",
+    icon: Code2,
+  },
+  {
+    to: "/app/transactions",
+    name: "Transaction Activity",
+    description: "Review transaction hashes and statuses recorded by this build.",
+    icon: ShieldCheck,
+  },
+  {
+    to: "/app/swap",
+    name: "Swap Preview",
+    description: "Sample quote UI only; live swap routing is not configured.",
+    icon: ArrowLeftRight,
+  },
 ];
 
 function Payments() {
   return (
-    <div className="px-5 pt-10">
-      <PageHeader title="Payments" subtitle="Move money, pay bills and top up." />
+    <div className="px-5 pb-10 pt-10">
+      <PageHeader
+        title="Crypto tools"
+        subtitle="Manage self-custody cryptocurrency across supported blockchains."
+      />
 
-      <section className="mt-6">
-        <h2 className="mb-3 font-display text-sm font-semibold text-muted-foreground">Transfers</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {transfers.map(({ to, name, icon: Icon }) => (
-            <Link
-              key={name}
-              to={to}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:shadow-soft"
-            >
-              <span className="grid h-11 w-11 place-items-center rounded-2xl gradient-gold text-navy">
-                <Icon className="h-5 w-5" />
+      <section className="mt-6 grid gap-3 sm:grid-cols-2">
+        {cryptoTools.map(({ to, name, description, icon: Icon }) => (
+          <Link
+            key={name}
+            to={to}
+            className="group flex items-start gap-3 rounded-2xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:shadow-soft"
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl gradient-gold text-navy shadow-glow">
+              <Icon className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">{name}</span>
+              <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                {description}
               </span>
-              <p className="text-sm font-semibold">{name}</p>
-            </Link>
-          ))}
-        </div>
+            </span>
+          </Link>
+        ))}
       </section>
 
-      <section className="mt-8">
-        <h2 className="mb-3 font-display text-sm font-semibold text-muted-foreground">
-          Airtime & Data
-        </h2>
-        <div className="grid grid-cols-4 gap-2">
-          {["Africell", "QCell", "Gamcel", "Comium"].map((n) => (
-            <button
-              key={n}
-              className="rounded-2xl border border-border bg-card px-2 py-3 text-xs font-medium hover:shadow-soft"
-            >
-              <Smartphone className="mx-auto mb-1 h-4 w-4 text-gold" />
-              {n}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-8">
-        <h2 className="mb-3 font-display text-sm font-semibold text-muted-foreground">Pay Bills</h2>
-        <div className="grid grid-cols-3 gap-3">
-          {bills.map(({ name, icon: Icon, color }) => (
-            <button
-              key={name}
-              className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-3 hover:shadow-soft"
-            >
-              <span className={`grid h-11 w-11 place-items-center rounded-2xl ${color}`}>
-                <Icon className="h-5 w-5" />
-              </span>
-              <p className="text-[11px] font-medium">{name}</p>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-8 rounded-3xl gradient-royal p-5 text-white shadow-elegant">
+      <section className="mt-6 rounded-3xl border border-amber-500/25 bg-amber-500/5 p-5">
         <div className="flex items-start gap-3">
-          <Receipt className="mt-1 h-6 w-6 text-gold" />
+          <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
           <div>
-            <p className="font-display text-lg font-bold">Save more with Daha Pay</p>
-            <p className="mt-1 text-xs text-white/70">
-              Get up to 3% cashback on all bill payments made this month.
+            <h2 className="font-display text-base font-bold">Merchant payment API</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Merchant checkout is not enabled yet. A production API key needs server-side key
+              issuance, scoped permissions, hashed storage, revocation, replay protection, and
+              payment-status callbacks. No placeholder key is being shown as if it could process
+              real payments.
             </p>
-            <button className="mt-3 rounded-full gradient-gold px-4 py-1.5 text-xs font-semibold text-navy">
-              Learn more
-            </button>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Until that backend is implemented and tested, third-party apps must not treat a wallet
+              address or a client-side response as proof of payment.
+            </p>
           </div>
         </div>
       </section>
+
+      <div className="mt-5">
+        <Link
+          to="/app/security"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-gold hover:underline"
+        >
+          Review wallet security <ExternalLink className="h-3 w-3" />
+        </Link>
+      </div>
     </div>
   );
 }

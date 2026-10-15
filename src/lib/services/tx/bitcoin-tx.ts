@@ -7,6 +7,7 @@
  * estimation are hand-written here, which is comparatively low-risk
  * (worst case: overpay fee or fail to build, not an invalid signature).
  */
+import { Buffer } from "buffer";
 import * as bitcoin from "bitcoinjs-lib";
 import {
   getUtxos,

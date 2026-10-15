@@ -3,13 +3,12 @@ import { Wallet, RefreshCw, ExternalLink, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { useStoredWallet, usePortfolio, useTransactionHistory } from "@/hooks/use-wallet";
 import { shortenAddress } from "@/lib/wallet";
+import { isChainLive } from "@/lib/config/chains";
 import { SkeletonLine } from "@/components/ui/skeletons";
 
 /**
- * Live multi-chain wallet strip: shows total portfolio value, primary
- * address, and recent activity across BTC, ETH, BNB, SOL, ROY, USDT, USDC.
- *
- * Falls back to a soft prompt when no wallet has been created yet.
+ * Multi-chain wallet strip: shows RPC-backed native balances and local-session
+ * activity. Market values are estimates until a trusted price feed is connected.
  */
 export function WalletStrip() {
   const wallet = useStoredWallet();
@@ -27,7 +26,8 @@ export function WalletStrip() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">Connect Royal Chain Wallet</p>
             <p className="text-[11px] text-muted-foreground">
-              Create or import a wallet to hold BTC, ETH, BNB, SOL, ROY and more.
+              Create or import a wallet for BTC, ETH, BNB and SOL. SPL token reads are not enabled
+              yet.
             </p>
           </div>
         </div>
@@ -50,11 +50,18 @@ export function WalletStrip() {
   }
 
   const primaryAddress = wallet.addresses.solana.address;
+  const liveNetworkCount = (["bitcoin", "ethereum", "bnb", "solana"] as const).filter(
+    isChainLive,
+  ).length;
 
   const copy = async () => {
-    await navigator.clipboard.writeText(primaryAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+    try {
+      await navigator.clipboard.writeText(primaryAddress);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
   };
 
   return (
@@ -66,7 +73,7 @@ export function WalletStrip() {
           </span>
           <div>
             <p className="text-xs font-semibold">Royal Chain Wallet</p>
-            <p className="text-[10px] text-muted-foreground">Portfolio value</p>
+            <p className="text-[10px] text-muted-foreground">Native crypto · USD estimate</p>
           </div>
         </div>
         <button
@@ -86,6 +93,10 @@ export function WalletStrip() {
           <SkeletonLine className="h-8 w-40" />
         ) : portfolio.isError ? (
           <p className="font-display text-sm text-destructive">Unable to load balance</p>
+        ) : liveNetworkCount === 0 ? (
+          <p className="font-display text-lg font-bold text-foreground">
+            Network data not connected
+          </p>
         ) : (
           <p className="font-display text-3xl font-bold text-gold-shimmer">
             $
@@ -93,12 +104,6 @@ export function WalletStrip() {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
-            <span
-              className={`ml-2 align-middle text-sm font-semibold ${(portfolio.data?.change24hPct ?? 0) >= 0 ? "text-success" : "text-destructive"}`}
-            >
-              {(portfolio.data?.change24hPct ?? 0) >= 0 ? "+" : ""}
-              {portfolio.data?.change24hPct.toFixed(2)}%
-            </span>
           </p>
         )}
         <button
@@ -108,6 +113,10 @@ export function WalletStrip() {
           {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
           {shortenAddress(primaryAddress, 6, 6)}
         </button>
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          {liveNetworkCount}/4 native networks have RPC endpoints configured · market prices are
+          estimates until a live price feed is set
+        </p>
       </div>
 
       <div className="mt-4 border-t border-dashed border-border pt-3">

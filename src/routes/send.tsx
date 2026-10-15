@@ -21,7 +21,7 @@ export const Route = createFileRoute("/send")({
   component: SendMoney,
 });
 
-type Step = 0 | 1 | 2 | 3 | 4;
+type Step = 0 | 1 | 2 | 3 | 4 | 5;
 
 const VALIDATORS: Record<AssetSymbol, (a: string) => boolean> = {
   BTC: bitcoinService.isValidAddress,
@@ -51,6 +51,9 @@ function SendMoney() {
   const [error, setError] = useState<string | null>(null);
   const [broadcasting, setBroadcasting] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [confirmationStatus, setConfirmationStatus] = useState<
+    "pending" | "confirmed" | "failed" | null
+  >(null);
 
   const symbol = asset?.symbol ?? "SOL";
   const meta = ASSET_CATALOG[symbol];
@@ -69,7 +72,7 @@ function SendMoney() {
 
   const validateAddress = (a: string) => VALIDATORS[symbol](a);
   const addressOk = recipient.trim().length > 0 && validateAddress(recipient.trim());
-  const amountOk = Number(amount) > 0 && Number(amount) <= balance;
+  const amountOk = Number(amount) > 0 && total <= balance;
   const pinOk = /^\d{6}$/.test(pin);
 
   async function broadcast() {
@@ -91,8 +94,19 @@ function SendMoney() {
         mnemonic, // enables a real signed broadcast when this chain has a live RPC endpoint configured
       });
       setTxHash(record.hash);
+      setConfirmationStatus(record.status);
+      if (record.status !== "confirmed") {
+        // Do not show a success receipt or allow an immediate retry when the
+        // network has not confirmed the broadcast; verify the hash first.
+        setStep(5);
+        toast.warning("Transaction is not confirmed", {
+          description: "Check its network status before considering another send.",
+        });
+        return;
+      }
+
       setStep(4);
-      toast.success(`Sent ${amount} ${symbol}`, {
+      toast.success(`Confirmed ${amount} ${symbol}`, {
         description: `To ${shortenAddress(recipient, 6, 6)}`,
       });
     } catch (e) {
@@ -238,7 +252,11 @@ function SendMoney() {
 
             {!amountOk && amount && (
               <p className="mt-2 text-xs text-destructive">
-                {Number(amount) > balance ? "Insufficient balance" : "Enter a valid amount"}
+                {Number(amount) > balance
+                  ? "Insufficient balance"
+                  : total > balance
+                    ? "Reserve enough crypto for the estimated network fee"
+                    : "Enter a valid amount"}
               </p>
             )}
 
@@ -273,6 +291,10 @@ function SendMoney() {
                 <Line label="To" value={shortenAddress(recipient, 6, 6)} />
                 {note && <Line label="Comment" value={note} />}
                 <Line label="Est. network fee" value={`~${fee} ${symbol}`} />
+                <p className="text-[10px] leading-4 text-muted-foreground">
+                  Fee is an estimate; the network or UTXO fee calculation may differ. Confirm the
+                  final transaction details before signing.
+                </p>
                 <Line label="Total" value={`${total.toFixed(6)} ${symbol}`} bold />
               </div>
               <div className="mt-4 flex items-center gap-2 rounded-2xl bg-success/10 p-3 text-xs text-success">
@@ -310,7 +332,7 @@ function SendMoney() {
             <div className="relative mx-auto grid h-24 w-24 place-items-center rounded-full gradient-gold text-navy shadow-glow">
               <Check className="h-10 w-10" strokeWidth={3} />
             </div>
-            <h2 className="mt-6 font-display text-2xl font-bold">Transaction Broadcast</h2>
+            <h2 className="mt-6 font-display text-2xl font-bold">Transaction Confirmed</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Your {symbol} is on its way. Confirmation typically takes ~10-30 seconds.
             </p>
@@ -332,6 +354,52 @@ function SendMoney() {
             >
               Back to Dashboard
             </Link>
+          </div>
+        )}
+        {step === 5 && asset && (
+          <div className="pt-6 text-center">
+            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-600">
+              <AlertTriangle className="h-9 w-9" />
+            </div>
+            <h2 className="mt-5 font-display text-xl font-bold">
+              {confirmationStatus === "failed"
+                ? "Network reported a failed transaction"
+                : "Transaction not confirmed yet"}
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Do not send again yet. Check this transaction on the network explorer before retrying
+              to avoid a duplicate transfer.
+            </p>
+            <div className="mt-5 rounded-2xl border border-border bg-card p-4 text-left">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                Transaction hash
+              </p>
+              <p className="mt-2 break-all font-mono text-xs">{txHash}</p>
+            </div>
+            {txHash && (
+              <a
+                href={
+                  meta.chain === "bitcoin"
+                    ? `https://mempool.space/tx/${txHash}`
+                    : meta.chain === "ethereum"
+                      ? `https://etherscan.io/tx/${txHash}`
+                      : meta.chain === "bnb"
+                        ? `https://bscscan.com/tx/${txHash}`
+                        : `https://solscan.io/tx/${txHash}`
+                }
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-semibold text-gold"
+              >
+                Check transaction status
+              </a>
+            )}
+            <button
+              onClick={() => navigate({ to: "/app" })}
+              className="mt-5 grid h-12 w-full place-items-center rounded-2xl gradient-gold font-semibold text-navy shadow-glow"
+            >
+              Back to Dashboard
+            </button>
           </div>
         )}
       </div>

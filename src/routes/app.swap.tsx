@@ -24,6 +24,7 @@ export const Route = createFileRoute("/app/swap")({
 
 const SLIPPAGE_OPTIONS = [0.1, 0.5, 1.0];
 const QUOTE_TTL_SECONDS = 20;
+const SWAP_ROUTING_ENABLED = false; // No audited on-chain DEX route is connected yet.
 
 function SwapPage() {
   const navigate = useNavigate();
@@ -71,7 +72,8 @@ function SwapPage() {
   }, [quote.data, amount, fromSymbol]);
 
   const insufficientBalance = fromAsset ? Number(amount) > fromAsset.amount : false;
-  const canReview = !!wallet && Number(amount) > 0 && !insufficientBalance && !!quote.data;
+  const canReview =
+    SWAP_ROUTING_ENABLED && !!wallet && Number(amount) > 0 && !insufficientBalance && !!quote.data;
 
   function flip() {
     setFromSymbol(toSymbol);
@@ -110,6 +112,14 @@ function SwapPage() {
       </header>
 
       <div className="px-5 pt-6">
+        <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-5 text-muted-foreground">
+          <p className="font-semibold text-foreground">Swap preview only</p>
+          <p className="mt-1">
+            Rates and charts below use sample prices. A live swap router, on-chain quote
+            verification, and signed swap instructions are not configured. This screen cannot move
+            assets yet.
+          </p>
+        </div>
         {/* From */}
         <div className="rounded-3xl border border-border bg-card p-4">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -181,7 +191,7 @@ function SwapPage() {
                 <RouteIcon className="h-3.5 w-3.5" /> Best route
               </span>
               <span className="font-medium">
-                {fromSymbol} → {toSymbol} · Royal Aggregator
+                {fromSymbol} → {toSymbol} · Router not connected
               </span>
             </div>
             <div className="flex items-center justify-between text-[10px] text-muted-foreground">
@@ -202,11 +212,13 @@ function SwapPage() {
           onClick={() => setConfirmOpen(true)}
           className="mt-6 grid h-14 w-full place-items-center rounded-2xl gradient-gold font-semibold text-navy shadow-glow disabled:opacity-50"
         >
-          {!amount
-            ? "Enter an amount"
-            : insufficientBalance
-              ? "Insufficient balance"
-              : "Review Swap"}
+          {!SWAP_ROUTING_ENABLED
+            ? "Live swap routing not configured"
+            : !amount
+              ? "Enter an amount"
+              : insufficientBalance
+                ? "Insufficient balance"
+                : "Review Swap"}
         </button>
       </div>
 
@@ -424,11 +436,11 @@ function ConfirmSwapSheet({
     setStep("swapping");
     try {
       await unlockWallet(wallet, pin);
-      await new Promise((r) => setTimeout(r, 1000));
-      setStep("done");
-      toast.success(`Swapped ${quote.fromAmount} ${quote.fromSymbol}`, {
-        description: `Received ~${quote.toAmount} ${quote.toSymbol}`,
-      });
+      // The quote is illustrative only. Never turn PIN verification into a
+      // fake successful swap without a signed, broadcast on-chain route.
+      throw new Error(
+        "On-chain swap routing is not configured. This quote is a preview; no assets were moved.",
+      );
     } catch (e) {
       const message = e instanceof Error ? e.message : "Swap failed.";
       setError(message);

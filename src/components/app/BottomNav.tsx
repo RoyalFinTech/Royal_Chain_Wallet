@@ -3,8 +3,8 @@ import { Home, Wallet, Repeat, Receipt, User } from "lucide-react";
 
 const items = [
   { to: "/app", label: "Home", icon: Home },
-  { to: "/app/currencies", label: "Wallets", icon: Wallet },
-  { to: "/app/exchange", label: "Exchange", icon: Repeat },
+  { to: "/app/currencies", label: "Crypto", icon: Wallet },
+  { to: "/app/swap", label: "Swap", icon: Repeat },
   { to: "/app/transactions", label: "History", icon: Receipt },
   { to: "/app/profile", label: "Profile", icon: User },
 ] as const;
@@ -13,7 +13,7 @@ export function BottomNav() {
   const { location } = useRouterState();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto max-w-md px-3 pb-3">
+      <div className="mx-auto w-full max-w-3xl px-3 pb-3">
         <div className="glass rounded-3xl px-2 py-2 shadow-elegant">
           <ul className="flex items-center justify-between">
             {items.map(({ to, label, icon: Icon }) => {

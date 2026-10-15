@@ -15,7 +15,7 @@ export const getPortfolio = createServerFn({ method: "GET" })
     const { data: wallets, error: walletsErr } = await context.db
       .from("wallets")
       .select("id")
-      .eq("user_id", context.userId);
+      .eq("user_id", context.profileId);
     if (walletsErr) throw new Error(walletsErr.message);
     if (!wallets || wallets.length === 0) return { totalUsd: 0, assets: [] };
 

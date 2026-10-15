@@ -1,0 +1,149 @@
+name: Engineering QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - "security/**"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, tests, lint, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Current lock is missing lru-cache@11.5.3. Refresh metadata without
+      # dependency lifecycle scripts before the clean install.
+      - name: Refresh stale npm lockfile on security branch
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/security/')
+        run: npx --yes npm@11 install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Install dependencies
+        # Use the same npm major used to resolve and refresh package-lock.json.
+        run: npx --yes npm@11 ci
+
+      - name: Dependency audit summary (non-blocking)
+        # Print package-level advisory metadata for review without running
+        # npm audit fix or silently changing dependency versions.
+        continue-on-error: true
+        shell: bash
+        run: |
+          npm audit --json > "$RUNNER_TEMP/npm-audit.json" || true
+          node - "$RUNNER_TEMP/npm-audit.json" <<'NODE'
+          const fs = require("node:fs");
+          const path = process.argv[2];
+          let report;
+          try {
+            report = JSON.parse(fs.readFileSync(path, "utf8"));
+          } catch (error) {
+            console.log("npm audit report could not be parsed:", String(error));
+            process.exit(0);
+          }
+          console.log("Audit severity totals:", JSON.stringify(report.metadata?.vulnerabilities ?? {}));
+          for (const [name, item] of Object.entries(report.vulnerabilities ?? {})) {
+            const via = (item.via ?? []).map((entry) =>
+              typeof entry === "string"
+                ? entry
+                : { title: entry.title, range: entry.range, url: entry.url }
+            );
+            console.log(JSON.stringify({
+              package: name,
+              severity: item.severity,
+              direct: item.isDirect,
+              range: item.range,
+              fixAvailable: item.fixAvailable,
+              advisories: via
+            }));
+          }
+          NODE
+
+      # The changed TypeScript files were created through repository API
+      # edits, so apply the project's actual Prettier rules before verification.
+      # Commit only to this security branch, then dispatch a clean check run
+      # against the exact new head (GITHUB_TOKEN pushes don't trigger push runs).
+      - name: Format and commit branch-only source changes
+        id: format
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/security/')
+        run: |
+          git fetch origin main
+          CHANGED_TS="$(git diff --name-only origin/main...HEAD -- '*.ts' '*.tsx')"
+          if [ -n "$CHANGED_TS" ]; then
+            printf '%s\n' "$CHANGED_TS" | xargs -r npx prettier --write
+          fi
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json $CHANGED_TS
+            git commit -m "style: format and sync engineering QA changes"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Re-run QA on the formatted branch head
+        if: steps.format.outputs.updated == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "qa.yml",
+              ref: process.env.GITHUB_REF_NAME
+            });
+
+      - name: TypeScript typecheck
+        id: typecheck
+        continue-on-error: true
+        run: npm run typecheck
+
+      - name: Unit tests
+        id: tests
+        continue-on-error: true
+        run: npm test
+
+      - name: Lint
+        id: lint
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Production build
+        id: build
+        continue-on-error: true
+        run: npm run build
+
+      - name: Summarize verification
+        if: always()
+        env:
+          TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+        run: |
+          printf 'Typecheck: %s\nTests: %s\nLint: %s\nBuild: %s\n' \
+            "$TYPECHECK_OUTCOME" "$TESTS_OUTCOME" "$LINT_OUTCOME" "$BUILD_OUTCOME"
+          test "$TYPECHECK_OUTCOME" = "success" &&
+          test "$TESTS_OUTCOME" = "success" &&
+          test "$LINT_OUTCOME" = "success" &&
+          test "$BUILD_OUTCOME" = "success"

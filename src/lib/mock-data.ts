@@ -120,13 +120,7 @@ export const INCOME_DATA = [
   { name: "Sun", amount: 850 },
 ];
 
-export const COUNTRIES = [
-  { code: "GM", name: "Gambia", dial: "+220", flag: "🇬🇲" },
-  { code: "SN", name: "Senegal", dial: "+221", flag: "🇸🇳" },
-  { code: "NG", name: "Nigeria", dial: "+234", flag: "🇳🇬" },
-  { code: "GH", name: "Ghana", dial: "+233", flag: "🇬🇭" },
-  { code: "KE", name: "Kenya", dial: "+254", flag: "🇰🇪" },
-];
+export { COUNTRIES } from "./countries";
 
 export const DEPOSIT_METHODS = [
   { id: "wave", name: "Wave", desc: "Instant top up", icon: "🌊", fee: "Free" },

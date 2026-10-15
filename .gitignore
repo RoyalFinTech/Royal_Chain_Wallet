@@ -1,3 +1,9 @@
+# Environment variables: never commit machine-local configuration.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
 # Logs
 logs
 *.log

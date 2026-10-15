@@ -1,26 +1,23 @@
 /**
- * Cross-chain transaction history, send, and swap-quote service.
- *
- * getHistory is still mock/session-based — a real indexer integration is
- * a separate piece of work (see docs/REMAINING_WORK.md). submitTransfer
- * now performs a REAL signed broadcast when the target chain has a live
- * RPC endpoint configured (lib/config/chains.ts isChainLive) and a
- * mnemonic is supplied; otherwise it falls back to the existing
- * simulated flow so the app keeps working end-to-end in an unconfigured
- * environment.
+ * Cross-chain transaction history, native-asset sends, and sample swap quotes.
+ * History only includes real hashes created during this browser session; a
+ * chain indexer is not connected. Unsupported transfers fail closed and never
+ * create a synthetic hash or success status. Swap quotes are preview-only.
  */
-import { mockTransactions } from "./mockData";
 import type { AssetSymbol, QuoteResult, TxRecord } from "./types";
 import { isChainLive } from "@/lib/config/chains";
 import { sendAndConfirm } from "@/lib/wallet/signing";
+import { AppError } from "@/lib/errors/types";
 import type { ChainId } from "@/lib/wallet/derive";
 
 const sessionTxs = new Map<string, TxRecord[]>();
 
-export async function getHistory(address: string, symbols: AssetSymbol[]): Promise<TxRecord[]> {
-  const base = mockTransactions(address, symbols, 14);
-  const extra = sessionTxs.get(address) ?? [];
-  return [...extra, ...base].sort((a, b) => b.timestamp - a.timestamp);
+export async function getHistory(address: string, _symbols: AssetSymbol[]): Promise<TxRecord[]> {
+  // Only actual transactions created during this local session are surfaced.
+  // Historical chain activity needs a transaction-indexer integration; never
+  // fill the list with fabricated incoming/outgoing transactions.
+  const localRecords = sessionTxs.get(address) ?? [];
+  return [...localRecords].sort((a, b) => b.timestamp - a.timestamp);
 }
 
 export async function submitTransfer(opts: {
@@ -30,53 +27,69 @@ export async function submitTransfer(opts: {
   chain: TxRecord["chain"];
   amount: number;
   usdValue: number;
-  /**
-   * The decrypted mnemonic, if the caller already unlocked the wallet
-   * for this operation (see unlockWallet in lib/wallet). Required for a
-   * real broadcast; omit to force the simulated flow (e.g. for
-   * SPL-token sends, which aren't wired to real signing yet — see
-   * docs/REMAINING_WORK.md).
-   */
   mnemonic?: string;
 }): Promise<TxRecord> {
+  const expectedChain: Record<AssetSymbol, ChainId> = {
+    BTC: "bitcoin",
+    ETH: "ethereum",
+    BNB: "bnb",
+    SOL: "solana",
+    ROY: "solana",
+    USDT: "solana",
+    USDC: "solana",
+  };
+
+  if (opts.chain !== expectedChain[opts.symbol]) {
+    throw new AppError(
+      "validation_error",
+      `Asset ${opts.symbol} does not belong to the selected ${opts.chain} network. No funds were sent.`,
+    );
+  }
+  if (!Number.isFinite(opts.amount) || opts.amount <= 0) {
+    throw new AppError(
+      "validation_error",
+      "Transfer amount must be a finite number greater than zero.",
+    );
+  }
+  if (!Number.isFinite(opts.usdValue) || opts.usdValue < 0) {
+    throw new AppError("validation_error", "The estimated USD value is invalid.");
+  }
+
   const isNativeAsset =
     opts.symbol === "BTC" ||
     opts.symbol === "ETH" ||
     opts.symbol === "BNB" ||
     opts.symbol === "SOL";
 
-  if (opts.mnemonic && isNativeAsset && isChainLive(opts.chain as ChainId)) {
-    const { txHash, confirmation } = await sendAndConfirm({
-      chain: opts.chain as ChainId,
-      mnemonic: opts.mnemonic,
-      fromAddress: opts.fromAddress,
-      toAddress: opts.toAddress,
-      amount: opts.amount,
-    });
-    const record: TxRecord = {
-      id: `tx_${Date.now()}`,
-      chain: opts.chain,
-      symbol: opts.symbol,
-      direction: "out",
-      amount: opts.amount,
-      usdValue: opts.usdValue,
-      counterparty: `${opts.toAddress.slice(0, 4)}…${opts.toAddress.slice(-4)}`,
-      status: confirmation === "confirmed" ? "confirmed" : "failed",
-      timestamp: Date.now(),
-      feeUsd: 0, // real fee is embedded in the chain's own accounting; not separately tracked client-side yet
-      hash: txHash,
-    };
-    const existing = sessionTxs.get(opts.fromAddress) ?? [];
-    sessionTxs.set(opts.fromAddress, [record, ...existing]);
-    return record;
+  if (!opts.mnemonic) {
+    throw new AppError(
+      "unauthorized",
+      "Unlock the wallet before sending. No transaction was sent.",
+    );
   }
 
-  // Simulated fallback: chain not live, no mnemonic supplied, or an
-  // SPL-token asset (real SPL transfer signing isn't wired yet).
-  await new Promise((r) => setTimeout(r, 900 + Math.random() * 600));
-  const hash = Array.from({ length: 24 }, () => Math.floor(Math.random() * 16).toString(16)).join(
-    "",
-  );
+  if (!isNativeAsset) {
+    throw new AppError(
+      "not_configured",
+      `Transfers of ${opts.symbol} are disabled until the real token contract/mint and signing path are configured. No funds were sent.`,
+    );
+  }
+
+  if (!isChainLive(opts.chain as ChainId)) {
+    throw new AppError(
+      "not_configured",
+      `Live ${opts.chain} RPC is not configured. This wallet will not simulate a transfer or create a fake transaction hash. No funds were sent.`,
+    );
+  }
+
+  const { txHash, confirmation } = await sendAndConfirm({
+    chain: opts.chain as ChainId,
+    mnemonic: opts.mnemonic,
+    fromAddress: opts.fromAddress,
+    toAddress: opts.toAddress,
+    amount: opts.amount,
+  });
+
   const record: TxRecord = {
     id: `tx_${Date.now()}`,
     chain: opts.chain,
@@ -85,11 +98,13 @@ export async function submitTransfer(opts: {
     amount: opts.amount,
     usdValue: opts.usdValue,
     counterparty: `${opts.toAddress.slice(0, 4)}…${opts.toAddress.slice(-4)}`,
-    status: "confirmed",
+    status:
+      confirmation === "confirmed" ? "confirmed" : confirmation === "failed" ? "failed" : "pending",
     timestamp: Date.now(),
-    feeUsd: Number((Math.random() * 2 + 0.05).toFixed(2)),
-    hash,
+    feeUsd: 0,
+    hash: txHash,
   };
+
   const existing = sessionTxs.get(opts.fromAddress) ?? [];
   sessionTxs.set(opts.fromAddress, [record, ...existing]);
   return record;

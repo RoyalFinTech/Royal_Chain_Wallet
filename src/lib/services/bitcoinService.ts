@@ -1,13 +1,8 @@
 /**
- * Bitcoin chain service.
- *
- * Live when VITE_BTC_API_URL is set (real balance/fee data via an
- * Esplora-compatible REST API — see rpc/bitcoin-rpc.ts); falls back to
- * deterministic mock data otherwise. Bitcoin Core's native RPC isn't
- * safely callable from a browser, hence the REST-API approach rather
- * than a JSON-RPC client like the other chains.
+ * Bitcoin chain service. Live balances require the configured Esplora-compatible API.
+ * Without it the balance is zero/unavailable; only illustrative price metadata remains.
  */
-import { mockBalance, mockNetworkStatus } from "./mockData";
+import { sampleMarketData, mockNetworkStatus } from "./mockData";
 import type { AssetBalance, NetworkStatus } from "./types";
 import { isChainLive, chainEndpoint } from "@/lib/config/chains";
 import {
@@ -18,8 +13,10 @@ import {
 } from "./rpc/bitcoin-rpc";
 
 export async function getBalance(address: string): Promise<AssetBalance> {
-  const priced = mockBalance(address, "BTC");
-  if (!isChainLive("bitcoin")) return priced;
+  const priced = sampleMarketData("BTC");
+  if (!isChainLive("bitcoin")) {
+    return { ...priced, amount: 0, usdValue: 0, change24hPct: 0 };
+  }
 
   const apiUrl = requireApiUrl(chainEndpoint("bitcoin"));
   const { btc } = await getBtcBalance(apiUrl, address);
