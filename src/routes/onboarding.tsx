@@ -11,7 +11,7 @@ export const Route = createFileRoute("/onboarding")({
 const slides = [
   {
     title: "Your Multi-Chain Crypto Wallet",
-    desc: "Create a self-custody wallet for the cryptocurrency you hold and control. One recovery phrase derives addresses for Bitcoin, Ethereum, BNB Chain, and Solana.",
+    desc: "Store and manage supported cryptocurrencies in one self-custody wallet. Create addresses for Bitcoin, Ethereum, BNB Chain, and Solana, then check each network before receiving or sending.",
     bullets: [
       "Self-custody recovery phrase",
       "Bitcoin, Ethereum, BNB Chain, and Solana",
@@ -21,11 +21,11 @@ const slides = [
     image: "/royal-chain-wallet-onboarding.jpg",
     imageAlt:
       "Royal Chain Wallet premium smartphone crypto dashboard with multi-chain icons, portfolio chart and QR code",
-    imageCredit: "Royal Chain Wallet artwork",
+    imageCredit: "Royal Chain Wallet interface concept",
   },
   {
     title: "Your Keys. Your Responsibility.",
-    desc: "Your recovery phrase can restore your wallet in compatible wallet software. Keep it offline and never share it. Royal Chain Wallet does not need to see your phrase.",
+    desc: "Your recovery phrase controls access to your wallet. Keep it offline, never share it, and never enter it into a website or send it to support. Anyone with the phrase may be able to move your funds.",
     bullets: [
       "Choose a private six-digit PIN",
       "Back up your phrase offline",
@@ -39,7 +39,7 @@ const slides = [
   },
   {
     title: "Send and Receive Cryptocurrency",
-    desc: "Review the asset, network, recipient, amount, and fee before sending. Always share the address for the matching blockchain network. Live transactions require a configured and tested network connection.",
+    desc: "Send crypto only when the selected asset, blockchain network, destination address, amount, and fee all match. Network transfers are irreversible, and sending on the wrong chain can permanently lose funds.",
     bullets: [
       "Check network and recipient before sending",
       "Use the correct receive address for each chain",
