@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -24,6 +24,21 @@ export const Route = createFileRoute("/create-wallet")({
 type Step = 1 | 2 | 3 | 4 | 5;
 type WalletPreview = { addresses: DerivedAddresses; wordCount: 12 | 24 };
 
+/** Select unique recovery-word positions with the browser's cryptographic RNG. */
+function chooseVerificationIndices(wordCount: number, requestedCount = 6): number[] {
+  if (!globalThis.crypto?.getRandomValues) {
+    throw new Error("Secure randomness is unavailable for recovery phrase verification.");
+  }
+  const indices = Array.from({ length: wordCount }, (_, index) => index);
+  for (let i = indices.length - 1; i > 0; i -= 1) {
+    const random = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(random);
+    const j = random[0] % (i + 1);
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  return indices.slice(0, Math.min(requestedCount, wordCount)).sort((a, b) => a - b);
+}
+
 function CreateWallet() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(1);
@@ -35,6 +50,7 @@ function CreateWallet() {
   const [pin, setPin] = useState(Array(6).fill(""));
   const [confirmPin, setConfirmPin] = useState(Array(6).fill(""));
   const [copied, setCopied] = useState(false);
+  const [verifyIndices, setVerifyIndices] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Generate the recovery phrase and derive preview addresses in memory only.
@@ -69,8 +85,11 @@ function CreateWallet() {
         }
 
         if (cancelled) return;
-        setMnemonic(generatedMnemonic.split(" "));
-        setPreview({ addresses, wordCount: 12 });
+        const words = generatedMnemonic.split(" ");
+        setMnemonic(words);
+        setVerifyIndices(chooseVerificationIndices(words.length, 6));
+        setVerifyInputs({});
+        setPreview({ addresses, wordCount: words.length as 12 | 24 });
       } catch (e) {
         const reason = e instanceof Error ? e.message : "Unknown wallet-generation error";
         // Log the cause only; never log a mnemonic or private key.
@@ -88,7 +107,6 @@ function CreateWallet() {
     };
   }, [generationAttempt]);
 
-  const verifyIndices = useMemo(() => [2, 5, 8], []); // words #3, #6, #9
   const [verifyInputs, setVerifyInputs] = useState<Record<number, string>>({});
 
   const copyPhrase = async () => {
@@ -313,10 +331,10 @@ function CreateWallet() {
             <div className="animate-in fade-in slide-in-from-bottom-3 duration-400">
               <h1 className="font-display text-2xl font-bold">Confirm your phrase</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Enter the requested words to verify you saved them.
+                Enter the six randomly selected word positions to verify you saved your phrase. The positions change when a new phrase is generated.
               </p>
 
-              <div className="mt-5 space-y-3">
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {verifyIndices.map((i) => (
                   <label key={i} className="block">
                     <span className="text-xs font-medium text-muted-foreground">Word #{i + 1}</span>
@@ -324,7 +342,7 @@ function CreateWallet() {
                       value={verifyInputs[i] || ""}
                       onChange={(e) => setVerifyInputs({ ...verifyInputs, [i]: e.target.value })}
                       className="mt-1 h-12 w-full rounded-2xl border border-border bg-input/40 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/60"
-                      placeholder={`Enter word #${i + 1}`}
+                      placeholder={`Word #${i + 1}`}
                     />
                   </label>
                 ))}
