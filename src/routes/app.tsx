@@ -11,7 +11,7 @@ function AppLayout() {
   // (auth, onboarding, /app/*) shares the exact same motion.
   return (
     <div className="relative min-h-dvh bg-background">
-      <div className="mx-auto max-w-md">
+      <div className="mx-auto w-full max-w-7xl pb-24">
         <Outlet />
         <AppFooter />
       </div>
