@@ -93,3 +93,11 @@
 - The committed lockfile now uses patched compatible releases within declared semver ranges: Vitest / `@vitest/mocker` 4.1.11; `baseline-browser-mapping` 2.11.28; Browserslist 4.29.3; `brace-expansion` 1.1.21 and 5.0.12; `js-yaml` 4.3.2; `nanoid` 3.3.20; `postcss` 8.5.30; `seroval` 1.6.9; `shell-quote` 1.12.0; and `source-map-js` 1.2.2. The checked `npm audit --json` summary is **0 vulnerabilities**.
 - The QA workflow uses npm 11 consistently for lockfile refresh and clean install. The dependency audit is informational and does not automatically update packages on future pushes.
 - No service-role key was added, no live database migration was applied, and no real blockchain transfer or merchant payment was executed. Browser-level end-to-end smoke testing remains outstanding.
+
+
+## 2026-10-15 — Follow-up SQL correctness review
+
+- Reviewed the proposed (not applied) migration 11's privileged ledger-writing function.
+- Found a status mismatch: the function rejected any input status except `confirmed`, but its INSERT persisted the transaction as `pending` and left `confirmed_at` null. That contradicted the verified-only ledger-posting contract.
+- Corrected the proposed INSERT to persist `confirmed` and set `confirmed_at = now()`. This is a source-only migration change on `security/tx-hardening-2026-10-14`; it has **not** been run against the live Supabase project.
+- Next verification gate: run SQL/static checks and database integration tests against a disposable database with migrations 1–10 recovered. Do not apply migration 11 to production until the missing migration sources and live grants/RLS/functions are reconciled.
