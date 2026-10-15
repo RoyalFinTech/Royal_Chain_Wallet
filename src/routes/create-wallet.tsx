@@ -331,7 +331,8 @@ function CreateWallet() {
             <div className="animate-in fade-in slide-in-from-bottom-3 duration-400">
               <h1 className="font-display text-2xl font-bold">Confirm your phrase</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Enter the six randomly selected word positions to verify you saved your phrase. The positions change when a new phrase is generated.
+                Enter the six randomly selected word positions to verify you saved your phrase. The
+                positions change when a new phrase is generated.
               </p>
 
               <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">

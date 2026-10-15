@@ -279,32 +279,49 @@ function Dashboard() {
       <section className="mt-8">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-lg font-bold">Live crypto market</h2>
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${marketStatus === "live" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${marketStatus === "live" ? "bg-success" : "bg-muted-foreground"}`} />
-            {marketStatus === "live" ? "Live · refreshes every minute" : marketStatus === "loading" ? "Loading market data…" : "Market data unavailable"}
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${marketStatus === "live" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${marketStatus === "live" ? "bg-success" : "bg-muted-foreground"}`}
+            />
+            {marketStatus === "live"
+              ? "Live · refreshes every minute"
+              : marketStatus === "loading"
+                ? "Loading market data…"
+                : "Market data unavailable"}
           </span>
         </div>
         <p className="mb-3 text-[11px] text-muted-foreground">
-          USD spot prices and seven-day direction from CoinGecko. Prices can move quickly; verify before trading.
+          USD spot prices and seven-day direction from CoinGecko. Prices can move quickly; verify
+          before trading.
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {MARKET_ASSETS.map((asset) => {
             const market = marketData.find((item) => item.id === asset.id);
             if (!market) {
               return (
-                <div key={asset.id} className="flex min-h-36 flex-col justify-between rounded-2xl border border-dashed border-border bg-card p-4">
+                <div
+                  key={asset.id}
+                  className="flex min-h-36 flex-col justify-between rounded-2xl border border-dashed border-border bg-card p-4"
+                >
                   <p className="text-xs font-semibold">{asset.label}</p>
                   <div>
                     <p className="font-display text-lg font-bold">—</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {marketStatus === "loading" ? "Fetching latest quote…" : "Live quote not available"}
+                      {marketStatus === "loading"
+                        ? "Fetching latest quote…"
+                        : "Live quote not available"}
                     </p>
                   </div>
                 </div>
               );
             }
             const sparkline = market.sparkline_in_7d?.price ?? [];
-            const chartData = sparkline.map((amount, index) => ({ name: String(index + 1), amount }));
+            const chartData = sparkline.map((amount, index) => ({
+              name: String(index + 1),
+              amount,
+            }));
             const trend = market.price_change_percentage_7d_in_currency ?? 0;
             return (
               <InsightCard
@@ -391,7 +408,11 @@ function InsightCard({
   tone: "up" | "down";
 }) {
   const positive = tone === "up";
-  const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: total < 1 ? 6 : 2 }).format(total);
+  const usd = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: total < 1 ? 6 : 2,
+  }).format(total);
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card p-4">
       <p className="text-xs text-muted-foreground">{title} · live 7d</p>
