@@ -322,7 +322,7 @@ function Dashboard() {
               name: String(index + 1),
               amount,
             }));
-            const trend = market.price_change_percentage_7d_in_currency ?? 0;
+            const trend = typeof market.price_change_percentage_7d_in_currency === "number" && Number.isFinite(market.price_change_percentage_7d_in_currency) ? market.price_change_percentage_7d_in_currency : null;
             return (
               <InsightCard
                 key={asset.id}
@@ -330,7 +330,7 @@ function Dashboard() {
                 total={market.current_price}
                 trend={trend}
                 data={chartData}
-                tone={trend >= 0 ? "up" : "down"}
+                tone={trend !== null && trend >= 0 ? "up" : "down"}
               />
             );
           })}
@@ -403,11 +403,12 @@ function InsightCard({
 }: {
   title: string;
   total: number;
-  trend: number;
+  trend: number | null;
   data: { name: string; amount: number }[];
   tone: "up" | "down";
 }) {
-  const positive = tone === "up";
+  const hasTrend = trend !== null && Number.isFinite(trend);
+  const positive = hasTrend && tone === "up";
   const usd = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -418,11 +419,15 @@ function InsightCard({
       <p className="text-xs text-muted-foreground">{title} · live 7d</p>
       <p className="mt-1 font-display text-xl font-bold">{usd}</p>
       <div
-        className={`mt-1 inline-flex items-center gap-1 text-xs ${positive ? "text-success" : "text-destructive"}`}
+        className={`mt-1 inline-flex items-center gap-1 text-xs ${hasTrend ? (positive ? "text-success" : "text-destructive") : "text-muted-foreground"}`}
       >
-        {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-        {trend > 0 ? "+" : ""}
-        {trend.toFixed(2)}%
+        {hasTrend ? (
+          <>
+            {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {trend > 0 ? "+" : ""}
+            {trend.toFixed(2)}%
+          </>
+        ) : "7-day change unavailable"}
       </div>
       <div className="mt-3 h-16">
         <ResponsiveContainer width="100%" height="100%">
